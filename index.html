@@ -84,6 +84,8 @@ h1 span{color:var(--leather)}
 @media(max-width:640px){.pads{grid-template-columns:1fr}.score{grid-template-columns:repeat(2,1fr)}.stage{grid-template-columns:1fr 1fr}.mid{grid-column:1/-1;order:-1;width:100%}.hand{width:min(120px,34vw)}.hand-box{height:140px}}
 @media(prefers-reduced-motion:reduce){.shake,.pop,.flash,.score-pop,.out-pop,.impact.show{animation-duration:.01s!important}}
 .intro-card{border-top-color:var(--leather)}.intro-card h2{font-size:clamp(30px,9vw,48px)}.intro-n{font:clamp(56px,16vw,90px)/1 var(--head);color:var(--brass);margin:12px 0 0}
+.cuff-preview{width:136px;height:30px;margin:18px auto;border-radius:8px;background:var(--cuff);border:2px solid rgba(255,255,255,.25);box-shadow:inset 0 4px 8px rgba(255,255,255,.2),0 7px 13px rgba(0,0,0,.25)}
+.cuff-name{font:700 18px var(--body);color:var(--bone);min-height:26px}.cuff-nav{display:flex;gap:8px;margin-top:14px}.cuff-nav .go{width:50%;padding:10px}.cuff-skip{font:600 13px var(--body);background:none;border:0;color:var(--muted);cursor:pointer;padding:12px;text-decoration:underline}
 </style>
 </head>
 <body>
@@ -131,6 +133,8 @@ h1 span{color:var(--leather)}
 
 <div class="ov" id="introOv"><div class="card intro-card" role="status" aria-live="assertive"><h2>Toss starting</h2><div style="color:var(--muted)">Get your hand ready</div><div class="intro-n" id="introN">3</div></div></div>
 
+<div class="ov" id="cuffOv"><div class="card" role="dialog" aria-modal="true" aria-labelledby="cuffT"><h2 id="cuffT">Choose your cuff</h2><div style="color:var(--muted)">Visual only — pick a color or keep black.</div><div class="cuff-preview" id="cuffPreview"></div><div class="cuff-name" id="cuffName"></div><div class="cuff-nav"><button class="go sec" id="cuffPrev">Previous</button><button class="go sec" id="cuffNext">Next</button></div><div id="cuffUse" style="margin-top:8px"></div><button class="cuff-skip" id="cuffSkip">Skip — keep black</button></div></div>
+
 <div class="ov" id="mo"><div class="card" role="dialog" aria-modal="true" aria-labelledby="mt"><h2 id="mt"></h2><div id="mb" style="color:var(--muted);margin-bottom:16px"></div><div id="mbt" style="display:grid;gap:8px"></div></div></div>
 <script>
 (function(){
@@ -141,36 +145,38 @@ let S;
 let ai=false,snd=true,timers=[];
 
 function shade(h,v){const n=parseInt(h.slice(1),16),c=k=>Math.max(0,Math.min(255,((n>>k)&255)+v));return `rgb(${c(16)},${c(8)},${c(0)})`}
-function hand(n,skin){
-  const id='g'+skin.slice(1),hi=shade(skin,32),lo=shade(skin,-42),ln=shade(skin,-92);
-  const f=`fill="url(#${id})" stroke="${ln}" stroke-width="2" stroke-linejoin="round"`;
-  const crease=d=>`<path d="${d}" fill="none" stroke="${ln}" stroke-width="1.35" stroke-linecap="round" opacity=".5"/>`;
-  const nail=(x,y,w)=>`<rect x="${x+4}" y="${y+5}" width="${w-8}" height="12" rx="6" fill="#f7ded2" stroke="${ln}" stroke-width=".7"/>`;
-  const specs=[{x:39,y:47,h:70,w:22},{x:62,y:18,h:99,w:23},{x:86,y:32,h:85,w:22},{x:108,y:52,h:65,w:20}];
-  const raised=i=>{const q=specs[i];return `<rect x="${q.x}" y="${q.y}" width="${q.w}" height="${q.h}" rx="${q.w/2}" ${f}/>${nail(q.x,q.y,q.w)}${crease(`M${q.x+4} ${q.y+q.h*.58}H${q.x+q.w-4}`)}`};
-  const curled=i=>{const q=specs[i],y=94+i*2;return `<path d="M${q.x-1} ${y}Q${q.x+q.w/2} ${y-15} ${q.x+q.w+1} ${y}V${y+17}Q${q.x+q.w/2} ${y+25} ${q.x-1} ${y+17}Z" ${f}/>${crease(`M${q.x+4} ${y+10}H${q.x+q.w-4}`)}`};
-  let a=`<defs><linearGradient id="${id}" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="${hi}"/><stop offset=".52" stop-color="${skin}"/><stop offset="1" stop-color="${lo}"/></linearGradient></defs><ellipse cx="75" cy="169" rx="48" ry="5" fill="rgba(0,0,0,.32)"/>`;
+function hand(n,skin,cuff='#15191f'){
+  const id='g'+skin.slice(1),hi=shade(skin,30),lo=shade(skin,-36),ln=shade(skin,-88);
+  const f=`fill="url(#${id})" stroke="${ln}" stroke-width="1.8" stroke-linejoin="round"`;
+  const line=d=>`<path d="${d}" fill="none" stroke="${ln}" stroke-width="1.15" stroke-linecap="round" opacity=".38"/>`;
+  const nail=(x,y,w)=>`<path d="M${x+4} ${y+7}Q${x+w/2} ${y+1} ${x+w-4} ${y+7}V${y+18}H${x+4}Z" fill="#f8dfd3" opacity=".95"/>`;
+  const digits=[
+    {x:51,y:30,w:21,h:92}, // index
+    {x:75,y:13,w:22,h:109}, // middle
+    {x:100,y:27,w:21,h:95}, // ring
+    {x:123,y:47,w:19,h:75} // pinky
+  ];
+  const finger=i=>{const q=digits[i];return `<path d="M${q.x} 126V${q.y+q.w/2}Q${q.x} ${q.y} ${q.x+q.w/2} ${q.y}Q${q.x+q.w} ${q.y} ${q.x+q.w} ${q.y+q.w/2}V126Z" ${f}/>${nail(q.x,q.y,q.w)}${line(`M${q.x+4} ${q.y+q.h*.57}H${q.x+q.w-4}`)}`};
+  const thumb=`<path d="M48 130L22 86Q16 74 27 67Q38 61 45 74L65 108Q70 120 60 130Z" ${f}/>${nail(23,70,20)}`;
+  const raised=n===6?[]:digits.slice(0,Math.min(n,4)).map((_,i)=>finger(i)).join('');
+  let a=`<defs><linearGradient id="${id}" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="${hi}"/><stop offset=".55" stop-color="${skin}"/><stop offset="1" stop-color="${lo}"/></linearGradient></defs><ellipse cx="82" cy="175" rx="53" ry="5" fill="rgba(0,0,0,.3)"/>`;
   if(n===0){
-    a+=`<path d="M31 73Q35 59 50 58H107Q121 60 123 76V124Q121 150 100 159H51Q29 150 27 126V90Q27 80 31 73Z" ${f}/><path d="M27 88Q18 96 23 110L42 132Q51 141 61 134L69 125Q76 115 65 107L44 88Q34 79 27 88Z" ${f}/>`;
-    a+=`${crease('M42 76V98M63 70V99M85 70V99M106 76V98')}${crease('M38 119Q75 136 112 118')}${nail(40,63,20)}${nail(63,61,20)}${nail(86,62,20)}`;
-  }else if(n===6){
-    a+=`<path d="M40 94Q43 76 62 73H94Q111 76 115 96V139Q111 158 92 161H56Q37 157 34 139Z" ${f}/><path d="M48 109L19 79Q10 69 19 59Q29 51 39 62L67 93" ${f}/><path d="M102 113L128 78Q137 67 147 75Q156 83 148 95L117 137" ${f}/>`;
-    a+=`${nail(18,61,19)}${nail(129,76,18)}${crease('M49 122Q74 132 100 119')}${crease('M53 143Q75 150 96 142')}`;
+    a+=`<path d="M42 78Q45 65 59 64H125Q139 66 141 80V132Q138 155 118 164H65Q43 156 40 135Z" ${f}/>${line('M56 83V101M79 78V102M103 78V102M126 83V101')}`;
   }else{
-    const count=Math.min(4,n);
-    for(let i=0;i<count;i++)a+=raised(i);
-    a+=`<path d="M35 107Q37 85 58 82H96Q115 85 119 106V139Q115 158 94 161H56Q35 157 31 139Z" ${f}/>`;
-    for(let i=count;i<4;i++)a+=curled(i);
-    if(n===5)a+=`<path d="M42 116L17 72Q11 60 22 54Q34 48 41 61L67 101" ${f}/>${nail(18,58,20)}`;
-    else a+=`<path d="M42 118L25 102Q16 94 24 84Q32 76 42 85L65 104Q72 111 66 122L57 132Q49 137 42 129Z" ${f}/>${crease('M30 96L53 114')}`;
-    a+=`${crease('M48 135Q76 147 105 133')}${crease('M52 150Q76 157 99 149')}`;
+    a+=raised;
+    a+=`<path d="M43 116Q45 91 68 88H119Q140 91 145 116V142Q140 162 117 166H69Q46 162 40 142Z" ${f}/>`;
+    if(n===5)a+=thumb;
+    else if(n===6)a+=thumb;
+    a+=`${line('M62 136Q93 146 128 134')}${line('M67 151Q95 157 122 150')}`;
   }
-  return `<svg class="hand" viewBox="0 0 158 176" role="img" aria-label="${n}">${a}</svg>`;
+  a+=`<path d="M61 154H125L132 176H54Z" fill="${cuff}" stroke="${ln}" stroke-width="1.8" stroke-linejoin="round"/><path d="M59 159H127" stroke="rgba(255,255,255,.28)" stroke-width="2"/>`;
+  return `<svg class="hand" viewBox="0 0 164 182" role="img" aria-label="${n}">${a}</svg>`;
 }
 
 function reset(){
   timers.forEach(clearTimeout);timers=[];
-  S={inn:1,score:0,target:null,state:'idle',mode:'toss',first:0,tw:0,bk:0,pick:[null,null],balls:[0,0],runs:[0,0],log:[],intro:0,tossStarted:false};
+  const oldCuffs=S&&S.cuffs?S.cuffs:['#15191f','#15191f'];
+  S={inn:1,score:0,target:null,state:'idle',mode:'toss',first:0,tw:0,bk:0,pick:[null,null],balls:[0,0],runs:[0,0],log:[],intro:0,tossStarted:false,cuffs:oldCuffs,themeReady:[true,true],themePrompt:false};
   $('ov').classList.remove('show');$('tossOv').classList.remove('show');showTossIntro(0);clearImpacts();buildKeys();
   $('log').innerHTML='<p class="t">Play rock paper scissors to decide the toss. Picks stay hidden until the reveal.</p>';
   $('count').textContent='Ready';
@@ -195,7 +201,8 @@ function render(){
   document.querySelectorAll('.keys button').forEach(x=>x.disabled=S.state!=='pick'||(ai&&x.dataset.p==='1'));
 }
 function showHands(a,b,anim,cls){
-  $('h0').innerHTML=hand(a,SKIN[0]);$('h1').innerHTML=hand(b,SKIN[1]);
+  const cuffs=S&&S.cuffs?S.cuffs:['#15191f','#15191f'];
+  $('h0').innerHTML=hand(a,SKIN[0],cuffs[0]);$('h1').innerHTML=hand(b,SKIN[1],cuffs[1]);
   if(anim){$('h0').firstChild.classList.add(cls);$('h1').firstChild.classList.add(cls)}
 }
 function animateHand(p,cls){
@@ -218,6 +225,41 @@ function beginToss(){
   S.tossStarted=true;S.state='intro';S.intro=3;render();showTossIntro(3);
   [2,1].forEach((n,i)=>timers.push(setTimeout(()=>{S.intro=n;showTossIntro(n);beep(320+(2-n)*90,.12)},(i+1)*1000)));
   timers.push(setTimeout(()=>{S.intro=0;showTossIntro(0);S.state='idle';startBall()},3000));
+}
+const CUFFS=[
+  {name:'Black',color:'#15191f'},{name:'Red',color:'#d83a35'},{name:'Orange',color:'#ee852d'},
+  {name:'Yellow',color:'#e9c338'},{name:'Green',color:'#3e9c57'},{name:'Blue',color:'#3789cf'},
+  {name:'Indigo',color:'#5551ad'},{name:'Violet',color:'#9d56b8'}
+];
+let cuffIndex=0,cuffPlayer=null,cuffDone=null;
+function renderCuffPicker(){
+  const c=CUFFS[cuffIndex];
+  $('cuffPreview').style.setProperty('--cuff',c.color);$('cuffName').textContent=c.name;
+  $('cuffUse').innerHTML=`<button class="go" id="cuffConfirm">Use ${c.name}</button>`;
+  $('cuffConfirm').onclick=()=>finishCuff(c.color);
+}
+function openCuffPicker(player,done){
+  cuffPlayer=player;cuffDone=done;cuffIndex=0;
+  $('cuffT').textContent=`${NAMES[player]}, choose your cuff`;
+  $('cuffOv').classList.add('show');renderCuffPicker();
+}
+function finishCuff(color){
+  if(cuffPlayer==null)return;
+  const p=cuffPlayer,done=cuffDone;cuffPlayer=null;cuffDone=null;
+  $('cuffOv').classList.remove('show');done(color,p);
+}
+function completeCuffSetup(){
+  if(!S.themeReady.every(Boolean))return;
+  S.themePrompt=false;unmodal();beginToss();
+}
+function beginCuffSetup(){
+  S.themePrompt=true;S.themeReady=[false,net.role==='solo'];
+  S.cuffs=['#15191f','#15191f'];showHands(0,0,false);
+  openCuffPicker(0,color=>{
+    S.cuffs[0]=color;S.themeReady[0]=true;showHands(0,0,false);
+    if(net.role==='solo')completeCuffSetup();
+    else if(!S.themeReady[1])modal('Cuff ready',`Waiting for ${NAMES[1]} to choose a cuff…`,[]);
+  });
 }
 
 function beep(f,d,t){
@@ -382,6 +424,9 @@ $('go').addEventListener('click',act);
 $('again').addEventListener('click',again);
 $('aiT').addEventListener('click',e=>{ai=!ai;e.target.setAttribute('aria-pressed',ai);e.target.textContent='Player 2: '+(ai?'AI':'human');render()});
 $('sndT').addEventListener('click',e=>{snd=!snd;e.target.setAttribute('aria-pressed',snd);e.target.textContent='Sound '+(snd?'on':'off')});
+$('cuffPrev').addEventListener('click',()=>{cuffIndex=(cuffIndex+CUFFS.length-1)%CUFFS.length;renderCuffPicker()});
+$('cuffNext').addEventListener('click',()=>{cuffIndex=(cuffIndex+1)%CUFFS.length;renderCuffPicker()});
+$('cuffSkip').addEventListener('click',()=>finishCuff('#15191f'));
 
 const P2L='ASDFGHJ';
 addEventListener('keydown',e=>{
@@ -409,7 +454,7 @@ const firebaseConfig={
 };
 const fbApp=firebase.initializeApp(firebaseConfig),fbAuth=firebase.auth(),fbDb=firebase.database();
 let authPromise=null;
-const net={role:'local',code:'',room:null,gname:null,guestConnected:false,wait:false,last:'',lastAction:''};
+const net={role:'local',code:'',room:null,gname:null,guestConnected:false,wait:false,last:'',lastAction:'',cuffPicked:false,cuffPickerOpen:false};
 const online=()=>net.role==='host'||net.role==='guest',me=()=>net.role==='guest'?1:0;
 const home=()=>location.replace(location.pathname+location.search);
 function ensureAuth(){
@@ -467,7 +512,7 @@ function tossView(show,title){
 }
 function menu(){
   modal('Hand Cricket','Two players, one fist at a time. How do you want to play?',[
-    ['Play vs AI',()=>{unmodal();ai=true;net.role='solo';applyRole();askName(0,()=>{setName(1,'AI');beginToss()})}],
+    ['Play vs AI',()=>{unmodal();ai=true;net.role='solo';applyRole();askName(0,()=>{setName(1,'AI');beginCuffSetup()})}],
     ['Create an online room',()=>{unmodal();ai=false;askName(0,host)}],
     ['Join with a room code',joinUI,1]]);
 }
@@ -489,7 +534,8 @@ function receiveGuestAction(m){
   if(!m||!m.id||m.id===net.lastAction)return;
   net.lastAction=m.id;
   if(m.t==='arrived'){net.guestConnected=true;showWait()}
-  else if(m.t==='name'){net.gname=m.name;setName(1,m.name);unmodal();beginToss()}
+  else if(m.t==='name'){net.gname=m.name;setName(1,m.name);unmodal();beginCuffSetup()}
+  else if(m.t==='theme'){S.cuffs[1]=m.color;S.themeReady[1]=true;showHands(0,0,false);completeCuffSetup()}
   else if(m.t==='pick')lock(1,m.n);
   else if(m.t==='go')act();
   else if(m.t==='choose'&&S.tw===1)choose(m.c);
@@ -517,7 +563,7 @@ async function join(code){
     const room=fbDb.ref('rooms/'+code),current=(await room.once('value')).val();
     if(!current)throw new Error('No active room found with that code. Ask your friend to create a new room.');
     if(current.guestId&&current.guestId!==fbAuth.currentUser.uid)throw new Error('That room already has two players.');
-    net.role='guest';net.code=code;net.room=room;net.wait=false;applyRole();
+    net.role='guest';net.code=code;net.room=room;net.wait=false;net.cuffPicked=false;net.cuffPickerOpen=false;applyRole();
     const seat=await room.child('guestId').transaction(existing=>!existing||existing===fbAuth.currentUser.uid?fbAuth.currentUser.uid:undefined);
     if(!seat.committed)throw new Error('That room was just filled by another player.');
     room.child('guestId').onDisconnect().remove();
@@ -529,7 +575,7 @@ async function join(code){
 function snap(){
   const g=id=>$(id).innerHTML;
   const fx=p=>({text:$('fx'+p).textContent,cls:$('fx'+p).className});
-  return {S:{inn:S.inn,score:S.score,target:S.target,state:S.state,mode:S.mode,first:S.first,tw:S.tw,balls:S.balls,runs:S.runs,bk:S.bk,intro:S.intro,tossStarted:S.tossStarted},names:NAMES,guestReady:!!net.gname,count:$('count').textContent,h0:g('h0'),h1:g('h1'),n0:$('n0').textContent,n1:$('n1').textContent,fx:[fx(0),fx(1)],log:g('log'),tossShow:$('tossOv').classList.contains('show'),ovShow:$('ov').classList.contains('show'),wt:$('wt').textContent,ws:$('ws').textContent,tb:g('tb')};
+  return {S:{inn:S.inn,score:S.score,target:S.target,state:S.state,mode:S.mode,first:S.first,tw:S.tw,balls:S.balls,runs:S.runs,bk:S.bk,intro:S.intro,tossStarted:S.tossStarted,cuffs:S.cuffs,themeReady:S.themeReady,themePrompt:S.themePrompt},names:NAMES,guestReady:!!net.gname,count:$('count').textContent,h0:g('h0'),h1:g('h1'),n0:$('n0').textContent,n1:$('n1').textContent,fx:[fx(0),fx(1)],log:g('log'),tossShow:$('tossOv').classList.contains('show'),ovShow:$('ov').classList.contains('show'),wt:$('wt').textContent,ws:$('ws').textContent,tb:g('tb')};
 }
 setInterval(()=>{
   if(net.role!=='host'||!net.room)return;
@@ -553,6 +599,15 @@ function apply(d){
   render();
   showTossIntro(d.S.intro||0);
   if(net.wait&&d.guestReady){net.wait=false;unmodal()}
+  if(S.themePrompt&&net.role==='guest'&&!net.cuffPicked&&!net.cuffPickerOpen){
+    net.cuffPickerOpen=true;
+    openCuffPicker(1,color=>{
+      net.cuffPickerOpen=false;net.cuffPicked=true;S.cuffs[1]=color;showHands(0,0,false);
+      send({t:'theme',color});
+      modal('Cuff ready',`Waiting for ${NAMES[0]} to start the toss…`,[]);
+    });
+  }
+  if(!S.themePrompt&&net.role==='guest'&&net.cuffPicked)unmodal();
   tossView(d.tossShow,d.tossShow?NAMES[S.tw]+' won the toss':'');
   $('ov').classList.toggle('show',d.ovShow);
   $('wt').textContent=d.wt;$('ws').textContent=d.ws;$('tb').innerHTML=d.tb;
