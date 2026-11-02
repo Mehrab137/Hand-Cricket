@@ -4,7 +4,9 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Hand Cricket</title>
-<script src="https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-database-compat.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Figtree:wght@400;600;700&display=swap" rel="stylesheet">
 <style>
 :root{--night:#10151c;--panel:#18202a;--panel2:#1f2a36;--turf:#1b3a2b;--bone:#efe8d8;--leather:#d0392f;--brass:#e3ab3c;--muted:#8794a5;--line:#2b3846;--p1:#6fb6ff;--p2:#f0a06a;
@@ -368,19 +370,30 @@ addEventListener('keydown',e=>{
   if(m=e.code.match(/^Key([A-Z])$/)){const i=P2L.indexOf(m[1]);if(i>=0&&i<(T?3:7)&&!ai)press(1,i)}
 });
 
-/* ---------- names, rooms, online play (WebRTC via PeerJS) ---------- */
-const net={role:'local',peer:null,conn:null,code:'',hostReady:false,gname:null,wait:false,last:'',nameTimer:null};
-const online=()=>net.role!=='local',me=()=>net.role==='guest'?1:0;
+/* ---------- names, rooms, online play (Firebase Realtime Database) ---------- */
+const firebaseConfig={
+  apiKey:'AIzaSyDF37f4bW_pG-vM0YuVS4xegVb6IrVW6ho',
+  authDomain:'hand-cricket-8d572.firebaseapp.com',
+  projectId:'hand-cricket-8d572',
+  storageBucket:'hand-cricket-8d572.firebasestorage.app',
+  messagingSenderId:'1019109005590',
+  appId:'1:1019109005590:web:0e855323ad9cca582d1837',
+  databaseURL:'https://hand-cricket-8d572-default-rtdb.europe-west1.firebasedatabase.app'
+};
+const fbApp=firebase.initializeApp(firebaseConfig),fbAuth=firebase.auth(),fbDb=firebase.database();
+let authPromise=null;
+const net={role:'local',code:'',room:null,gname:null,guestConnected:false,wait:false,last:'',lastAction:''};
+const online=()=>net.role==='host'||net.role==='guest',me=()=>net.role==='guest'?1:0;
 const home=()=>location.replace(location.pathname+location.search);
-function send(m){try{net.conn&&net.conn.open&&net.conn.send(m)}catch(e){}}
-function stopNameRetry(){if(net.nameTimer){clearInterval(net.nameTimer);net.nameTimer=null}}
-function sendGuestName(){
-  // The first packet can be lost while WebRTC finishes opening its data
-  // channel. Keep reporting the guest name until the host acknowledges it.
-  stopNameRetry();
-  const report=()=>send({t:'name',name:NAMES[1]});
-  report();
-  net.nameTimer=setInterval(report,700);
+function ensureAuth(){
+  if(fbAuth.currentUser)return Promise.resolve(fbAuth.currentUser);
+  if(!authPromise)authPromise=fbAuth.signInAnonymously().then(r=>r.user).catch(e=>{authPromise=null;throw e});
+  return authPromise;
+}
+function send(m){
+  if(net.role!=='guest'||!net.room)return;
+  const id=Date.now().toString(36)+Math.random().toString(36).slice(2,7);
+  net.room.child('guestAction').set({...m,id}).catch(fail);
 }
 function modal(t,body,btns){
   $('mt').textContent=t;$('mb').innerHTML=body;
@@ -397,10 +410,11 @@ function askName(i,cb){
   modal(title,`<div style="color:var(--muted);font-size:14px">This name will appear for both players after you continue.</div><input id="mi" maxlength="14" placeholder="Player ${i+1}" autocomplete="name">`,[['Continue',()=>{setName(i,$('mi').value.trim().slice(0,14)||'Player '+(i+1));unmodal();cb()}]]);
 }
 function applyRole(){
+  const solo=net.role==='solo';
   $('pad0').style.display=net.role==='guest'?'none':'';
-  $('pad1').style.display=net.role==='host'?'none':'';
+  $('pad1').style.display=(net.role==='host'||solo)?'none':'';
   $('pad0').style.order=net.role==='host'?4:'';
-  $('aiT').style.display=online()?'none':'';
+  $('aiT').style.display='none';
 }
 function clearSel(){document.querySelectorAll('.keys button.sel').forEach(b=>b.classList.remove('sel'))}
 function press(p,n){
@@ -426,76 +440,74 @@ function tossView(show,title){
 }
 function menu(){
   modal('Hand Cricket','Two players, one fist at a time. How do you want to play?',[
-    ['Play on one device',()=>{unmodal();askName(0,()=>askName(1,()=>startBall()))}],
-    ['Create an online room',()=>{unmodal();host();askName(0,()=>{net.hostReady=true;tryStart()})}],
+    ['Play vs AI',()=>{unmodal();ai=true;net.role='solo';applyRole();askName(0,()=>{setName(1,'AI');startBall()})}],
+    ['Create an online room',()=>{unmodal();ai=false;askName(0,host)}],
     ['Join with a room code',joinUI,1]]);
 }
 function joinUI(){
-  modal('Join a room','Enter the 4-letter code from your friend.<input id="mi" maxlength="4" placeholder="ABCD" autocomplete="off" style="text-transform:uppercase;letter-spacing:6px">',[
-    ['Join',()=>{const c=$('mi').value.trim().toUpperCase();if(c.length===4){unmodal();join(c)}}],['Back',menu,1]]);
+  modal('Join a room','Enter the 6-character code from your friend.<input id="mi" maxlength="6" placeholder="ABC123" autocomplete="off" style="text-transform:uppercase;letter-spacing:6px">',[
+    ['Join',()=>{const c=$('mi').value.trim().toUpperCase();if(c.length===6){unmodal();join(c)}}],['Back',menu,1]]);
 }
 function showWait(){
   const link=location.href.split('#')[0]+'#'+net.code;
-  modal('Invite Player 2',`Share this code or link.<code>${net.code}</code><div style="font-size:12px;word-break:break-all">${link}</div><p>${net.conn?'Player 2 joined and is picking a name…':'Waiting for Player 2 to join…'}</p>`,[['Copy link',e=>{try{navigator.clipboard.writeText(link);e.target.textContent='Copied'}catch(x){}}]]);
+  const status=net.guestConnected?'Player 2 is choosing a name…':'Waiting for Player 2 to join…';
+  modal('Invite Player 2',`Share this code or link.<code>${net.code}</code><div style="font-size:12px;word-break:break-all">${link}</div><p>${status}</p>`,[['Copy link',e=>{try{navigator.clipboard.writeText(link);e.target.textContent='Copied'}catch(x){}}]]);
 }
-function tryStart(){
-  if(net.hostReady&&net.gname){setName(1,net.gname);unmodal();startBall()}
-  else if(net.hostReady)showWait();
+const fail=e=>{
+  const msg=typeof e==='string'?e:(e&&e.message?e.message:'Could not connect to the game room.');
+  modal('Online room problem',msg,[['Back to menu',home]]);
+};
+function roomCode(){const c='ABCDEFGHJKLMNPQRSTUVWXYZ23456789';let s='';for(let i=0;i<6;i++)s+=c[Math.floor(Math.random()*c.length)];return s}
+function receiveGuestAction(m){
+  if(!m||!m.id||m.id===net.lastAction)return;
+  net.lastAction=m.id;
+  if(m.t==='arrived'){net.guestConnected=true;showWait()}
+  else if(m.t==='name'){net.gname=m.name;setName(1,m.name);unmodal();startBall()}
+  else if(m.t==='pick')lock(1,m.n);
+  else if(m.t==='go')act();
+  else if(m.t==='choose'&&S.tw===1)choose(m.c);
+  else if(m.t==='again')again();
 }
-const lost=()=>{stopNameRetry();modal('Connection lost','The other player left the game.',[['Back to menu',home]])};
-const fail=e=>modal('Connection problem',e.type==='peer-unavailable'?'No room found with that code. Check it and try again.':'Could not connect ('+(e.type||e)+').',[['Back to menu',home]]);
-function host(){
-  net.role='host';applyRole();
-  const c='ABCDEFGHJKLMNPQRSTUVWXYZ23456789';net.code='';
-  for(let i=0;i<4;i++)net.code+=c[Math.floor(Math.random()*c.length)];
-  try{net.peer=new Peer('hc-'+net.code)}catch(e){return fail(e)}
-  net.peer.on('error',e=>{if(e.type==='unavailable-id'){net.peer.destroy();host()}else fail(e)});
-  net.peer.on('connection',cn=>{
-    if(net.conn){cn.close();return}
-    net.conn=cn;
-    cn.on('data',m=>{
-      if(m.t==='name'){
-        net.gname=m.name;
-        send({t:'name-ok'});
-        tryStart();
-      }
-      else if(m.t==='pick')lock(1,m.n);
-      else if(m.t==='go')act();
-      else if(m.t==='choose'){if(S.tw===1)choose(m.c)}
-      else if(m.t==='again')again();
-    });
-    cn.on('close',lost);
-    if(net.hostReady)showWait();
-  });
+async function host(){
+  try{
+    await ensureAuth();
+    net.role='host';net.gname=null;net.guestConnected=false;applyRole();
+    for(let attempt=0;attempt<8;attempt++){
+      const code=roomCode(),room=fbDb.ref('rooms/'+code);
+      const claim=await room.transaction(current=>current===null?{hostId:fbAuth.currentUser.uid,createdAt:firebase.database.ServerValue.TIMESTAMP}:undefined);
+      if(!claim.committed)continue;
+      net.code=code;net.room=room;net.last='';net.lastAction='';
+      room.onDisconnect().remove();
+      room.child('guestAction').on('value',s=>receiveGuestAction(s.val()));
+      showWait();return;
+    }
+    throw new Error('Could not reserve a room code. Please try again.');
+  }catch(e){fail(e)}
 }
-function join(code){
-  net.role='guest';applyRole();
-  try{net.peer=new Peer()}catch(e){return fail(e)}
-  net.peer.on('error',fail);
-  net.peer.on('open',()=>{
-    const cn=net.conn=net.peer.connect('hc-'+code,{reliable:true});
-    cn.on('open',()=>askName(1,()=>{
-      // Set this before sending. The host can respond immediately.
-      net.wait=true;
-      modal('Connected','Joining the match…',[]);
-      sendGuestName();
-    }));
-    cn.on('data',m=>{
-      if(m.t==='name-ok')stopNameRetry();
-      else if(m.t==='s')apply(m.d);
-    });
-    cn.on('close',lost);
-  });
+async function join(code){
+  try{
+    await ensureAuth();
+    const room=fbDb.ref('rooms/'+code),current=(await room.once('value')).val();
+    if(!current)throw new Error('No active room found with that code. Ask your friend to create a new room.');
+    if(current.guestId&&current.guestId!==fbAuth.currentUser.uid)throw new Error('That room already has two players.');
+    net.role='guest';net.code=code;net.room=room;net.wait=false;applyRole();
+    const seat=await room.child('guestId').transaction(existing=>!existing||existing===fbAuth.currentUser.uid?fbAuth.currentUser.uid:undefined);
+    if(!seat.committed)throw new Error('That room was just filled by another player.');
+    room.child('guestId').onDisconnect().remove();
+    room.child('state').on('value',s=>{const d=s.val();if(d)apply(d)});
+    send({t:'arrived'});
+    askName(1,()=>{net.wait=true;modal('Connected','Joining the match…',[]);send({t:'name',name:NAMES[1]})});
+  }catch(e){fail(e)}
 }
 function snap(){
   const g=id=>$(id).innerHTML;
-  return {S:{inn:S.inn,score:S.score,target:S.target,state:S.state,mode:S.mode,first:S.first,tw:S.tw,balls:S.balls,runs:S.runs,bk:S.bk},names:NAMES,count:$('count').textContent,h0:g('h0'),h1:g('h1'),n0:$('n0').textContent,n1:$('n1').textContent,log:g('log'),tossShow:$('tossOv').classList.contains('show'),ovShow:$('ov').classList.contains('show'),wt:$('wt').textContent,ws:$('ws').textContent,tb:g('tb')};
+  return {S:{inn:S.inn,score:S.score,target:S.target,state:S.state,mode:S.mode,first:S.first,tw:S.tw,balls:S.balls,runs:S.runs,bk:S.bk},names:NAMES,guestReady:!!net.gname,count:$('count').textContent,h0:g('h0'),h1:g('h1'),n0:$('n0').textContent,n1:$('n1').textContent,log:g('log'),tossShow:$('tossOv').classList.contains('show'),ovShow:$('ov').classList.contains('show'),wt:$('wt').textContent,ws:$('ws').textContent,tb:g('tb')};
 }
 setInterval(()=>{
-  if(net.role!=='host'||!net.conn||!net.conn.open)return;
+  if(net.role!=='host'||!net.room)return;
   const d=snap(),j=JSON.stringify(d);
-  if(j!==net.last){net.last=j;send({t:'s',d})}
-},120);
+  if(j!==net.last){net.last=j;net.room.child('state').set(d).catch(fail)}
+},150);
 function apply(d){
   const mc=d.S.mode!==S.mode,nb=d.S.bk!==S.bk;
   Object.assign(S,d.S);
@@ -510,14 +522,14 @@ function apply(d){
     const bar=$('bar');bar.classList.remove('run');void bar.offsetWidth;bar.classList.add('run');
   }else if(S.state!=='pick'&&$('l1').textContent==='Choose now'){$('l1').textContent='Waiting'}
   render();
-  if(net.wait&&d.names[1]){net.wait=false;unmodal()}
+  if(net.wait&&d.guestReady){net.wait=false;unmodal()}
   tossView(d.tossShow,d.tossShow?NAMES[S.tw]+' won the toss':'');
   $('ov').classList.toggle('show',d.ovShow);
   $('wt').textContent=d.wt;$('ws').textContent=d.ws;$('tb').innerHTML=d.tb;
 }
 reset();
 const hs=location.hash.slice(1);
-if(/^[A-Za-z0-9]{4}$/.test(hs)){joinUI();$('mi').value=hs.toUpperCase()}else menu();
+if(/^[A-Za-z0-9]{6}$/.test(hs)){modal('Joining room','Connecting to the match…',[]);join(hs.toUpperCase())}else menu();
 })();
 </script>
 </body>
