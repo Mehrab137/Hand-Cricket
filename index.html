@@ -36,9 +36,16 @@ h1 span{color:var(--leather)}
 .hand-box{height:min(186px,39vw);display:flex;align-items:center;justify-content:center;isolation:isolate}
 .shake{animation:bump 1s ease-in-out 3}
 .pop{animation:pop .45s cubic-bezier(.2,1.6,.4,1)}
+.score-pop{animation:scoreHand .7s cubic-bezier(.18,1.65,.35,1)}
+.out-pop{animation:outHand .85s cubic-bezier(.18,1.5,.35,1)}
 @keyframes bump{0%{transform:translateY(0)}20%{transform:translateY(-24px) rotate(-6deg)}45%{transform:translateY(0)}100%{transform:translateY(0)}}
 @keyframes pop{0%{transform:scale(.4) rotate(-12deg);opacity:0}100%{transform:scale(1);opacity:1}}
+@keyframes scoreHand{0%{transform:scale(1)}45%{transform:translateY(-12px) scale(1.17) rotate(-3deg)}100%{transform:scale(1)}}
+@keyframes outHand{0%,100%{transform:rotate(0) scale(1)}28%{transform:rotate(-12deg) scale(1.16)}55%{transform:rotate(9deg) scale(1.1)}}
 .num{font-family:var(--head);font-size:28px;margin-top:4px;min-height:34px}
+.impact{height:0;overflow:visible;font:900 clamp(24px,6vw,42px) var(--head);line-height:1;text-align:center;opacity:0;pointer-events:none;transform:translateY(-2px) scale(.3);text-shadow:0 4px 0 rgba(0,0,0,.22)}
+.impact.show{animation:impact 1.3s cubic-bezier(.16,1.2,.3,1) forwards}.impact.run{color:var(--brass)}.impact.out{color:#ff8a80}
+@keyframes impact{0%{opacity:0;transform:translateY(9px) scale(.25)}28%{opacity:1;transform:translateY(-4px) scale(1.25)}55%{opacity:1;transform:translateY(-1px) scale(1)}100%{opacity:0;transform:translateY(-12px) scale(.84)}}
 .mid{text-align:center;width:min(150px,28vw)}
 .count{font-family:var(--head);font-size:clamp(30px,8vw,54px);min-height:62px;line-height:62px}
 .bar{height:6px;background:rgba(0,0,0,.35);border-radius:4px;overflow:hidden;margin:6px 0 10px}
@@ -75,7 +82,8 @@ h1 span{color:var(--leather)}
 .card td,.card th{padding:8px;border-bottom:1px solid var(--line);font-size:15px}
 .card th{color:var(--muted);font-weight:600;font-size:12px}
 @media(max-width:640px){.pads{grid-template-columns:1fr}.score{grid-template-columns:repeat(2,1fr)}.stage{grid-template-columns:1fr 1fr}.mid{grid-column:1/-1;order:-1;width:100%}.hand{width:min(120px,34vw)}.hand-box{height:140px}}
-@media(prefers-reduced-motion:reduce){.shake,.pop,.flash{animation-duration:.01s!important}}
+@media(prefers-reduced-motion:reduce){.shake,.pop,.flash,.score-pop,.out-pop,.impact.show{animation-duration:.01s!important}}
+.intro-card{border-top-color:var(--leather)}.intro-card h2{font-size:clamp(30px,9vw,48px)}.intro-n{font:clamp(56px,16vw,90px)/1 var(--head);color:var(--brass);margin:12px 0 0}
 </style>
 </head>
 <body>
@@ -96,13 +104,13 @@ h1 span{color:var(--leather)}
 </section>
 
 <section class="stage" id="stage">
- <div class="side"><div class="role" id="r0"></div><div class="hand-box" id="h0"></div><div class="num" id="n0"></div></div>
+ <div class="side"><div class="role" id="r0"></div><div class="hand-box" id="h0"></div><div class="impact" id="fx0" aria-live="polite"></div><div class="num" id="n0"></div></div>
  <div class="mid">
   <div class="count" id="count">Ready</div>
   <div class="bar" id="bar"><i></i></div>
   <button class="go" id="go">Bowl first ball</button>
  </div>
- <div class="side"><div class="role" id="r1"></div><div class="hand-box" id="h1"></div><div class="num" id="n1"></div></div>
+ <div class="side"><div class="role" id="r1"></div><div class="hand-box" id="h1"></div><div class="impact" id="fx1" aria-live="polite"></div><div class="num" id="n1"></div></div>
  <div class="flash" id="flash"></div>
 </section>
 
@@ -121,6 +129,8 @@ h1 span{color:var(--leather)}
  <button class="go" id="again">Play again</button>
 </div></div>
 
+<div class="ov" id="introOv"><div class="card intro-card" role="status" aria-live="assertive"><h2>Toss starting</h2><div style="color:var(--muted)">Get your hand ready</div><div class="intro-n" id="introN">3</div></div></div>
+
 <div class="ov" id="mo"><div class="card" role="dialog" aria-modal="true" aria-labelledby="mt"><h2 id="mt"></h2><div id="mb" style="color:var(--muted);margin-bottom:16px"></div><div id="mbt" style="display:grid;gap:8px"></div></div></div>
 <script>
 (function(){
@@ -132,43 +142,36 @@ let ai=false,snd=true,timers=[];
 
 function shade(h,v){const n=parseInt(h.slice(1),16),c=k=>Math.max(0,Math.min(255,((n>>k)&255)+v));return `rgb(${c(16)},${c(8)},${c(0)})`}
 function hand(n,skin){
-  const id='g'+skin.slice(1),hi=shade(skin,34),lo=shade(skin,-45),ln=shade(skin,-92);
-  const f=`fill="url(#${id})" stroke="${ln}" stroke-width="1.7" stroke-linejoin="round"`;
-  const line=d=>`<path d="${d}" fill="none" stroke="${ln}" stroke-width="1.25" stroke-linecap="round" opacity=".5"/>`;
-  const nail=(d)=>`<path d="${d}" fill="#f7ded2" stroke="${ln}" stroke-width=".7" opacity=".92"/>`;
-  const finger=[
-    [`M42 118V47Q42 31 52 31Q62 31 62 46V112`,nail('M46 42Q52 35 58 43V51H46Z')],
-    [`M59 112V27Q59 10 70 10Q81 10 81 27V112`,nail('M63 25Q70 15 77 25V34H63Z')],
-    [`M78 115V38Q78 22 88 22Q99 22 99 39V119`,nail('M82 37Q88 27 95 37V46H82Z')],
-    [`M96 124V55Q96 40 106 40Q117 40 117 56V130`,nail('M100 55Q106 45 113 55V64H100Z')]
-  ];
-  let a=`<defs><linearGradient id="${id}" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="${hi}"/><stop offset=".5" stop-color="${skin}"/><stop offset="1" stop-color="${lo}"/></linearGradient></defs><ellipse cx="71" cy="169" rx="47" ry="5" fill="rgba(0,0,0,.32)"/>`;
+  const id='g'+skin.slice(1),hi=shade(skin,32),lo=shade(skin,-42),ln=shade(skin,-92);
+  const f=`fill="url(#${id})" stroke="${ln}" stroke-width="2" stroke-linejoin="round"`;
+  const crease=d=>`<path d="${d}" fill="none" stroke="${ln}" stroke-width="1.35" stroke-linecap="round" opacity=".5"/>`;
+  const nail=(x,y,w)=>`<rect x="${x+4}" y="${y+5}" width="${w-8}" height="12" rx="6" fill="#f7ded2" stroke="${ln}" stroke-width=".7"/>`;
+  const specs=[{x:39,y:47,h:70,w:22},{x:62,y:18,h:99,w:23},{x:86,y:32,h:85,w:22},{x:108,y:52,h:65,w:20}];
+  const raised=i=>{const q=specs[i];return `<rect x="${q.x}" y="${q.y}" width="${q.w}" height="${q.h}" rx="${q.w/2}" ${f}/>${nail(q.x,q.y,q.w)}${crease(`M${q.x+4} ${q.y+q.h*.58}H${q.x+q.w-4}`)}`};
+  const curled=i=>{const q=specs[i],y=94+i*2;return `<path d="M${q.x-1} ${y}Q${q.x+q.w/2} ${y-15} ${q.x+q.w+1} ${y}V${y+17}Q${q.x+q.w/2} ${y+25} ${q.x-1} ${y+17}Z" ${f}/>${crease(`M${q.x+4} ${y+10}H${q.x+q.w-4}`)}`};
+  let a=`<defs><linearGradient id="${id}" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="${hi}"/><stop offset=".52" stop-color="${skin}"/><stop offset="1" stop-color="${lo}"/></linearGradient></defs><ellipse cx="75" cy="169" rx="48" ry="5" fill="rgba(0,0,0,.32)"/>`;
   if(n===0){
-    a+=`<path d="M32 84Q34 67 48 65H100Q116 68 118 85V125Q116 149 97 156H51Q31 149 29 127Z" ${f}/><path d="M34 83Q38 61 52 61H104Q119 64 120 83V101H32Z" ${f}/>`;
-    a+=`<path d="M27 93Q20 105 28 119L48 134Q57 139 65 132L72 122Q77 112 67 106L47 91Q36 84 27 93Z" ${f}/>`;
-    a+=`${line('M43 83V99M63 78V100M84 78V100M104 83V99')}${line('M39 120Q72 133 105 119')}${nail('M41 69Q48 64 54 70V78H41Z')}${nail('M62 65Q69 59 76 66V75H62Z')}${nail('M84 66Q91 60 98 67V76H84Z')}`;
+    a+=`<path d="M31 73Q35 59 50 58H107Q121 60 123 76V124Q121 150 100 159H51Q29 150 27 126V90Q27 80 31 73Z" ${f}/><path d="M27 88Q18 96 23 110L42 132Q51 141 61 134L69 125Q76 115 65 107L44 88Q34 79 27 88Z" ${f}/>`;
+    a+=`${crease('M42 76V98M63 70V99M85 70V99M106 76V98')}${crease('M38 119Q75 136 112 118')}${nail(40,63,20)}${nail(63,61,20)}${nail(86,62,20)}`;
   }else if(n===6){
-    a+=`<path d="M40 103Q37 78 52 70Q69 61 88 70Q105 78 105 103V143Q99 157 77 158H55Q39 155 35 142Z" ${f}/><path d="M43 112L21 88Q12 77 20 68Q29 61 39 71L61 95" ${f}/><path d="M96 116L118 82Q126 70 136 77Q145 84 137 96L113 136" ${f}/>`;
-    a+=`${nail('M20 72Q27 65 33 72L38 79L27 87Z')}${nail('M123 82Q131 77 136 85L132 93L121 91Z')}${line('M49 113Q72 124 96 112')}${line('M52 138Q73 145 94 137')}`;
+    a+=`<path d="M40 94Q43 76 62 73H94Q111 76 115 96V139Q111 158 92 161H56Q37 157 34 139Z" ${f}/><path d="M48 109L19 79Q10 69 19 59Q29 51 39 62L67 93" ${f}/><path d="M102 113L128 78Q137 67 147 75Q156 83 148 95L117 137" ${f}/>`;
+    a+=`${nail(18,61,19)}${nail(129,76,18)}${crease('M49 122Q74 132 100 119')}${crease('M53 143Q75 150 96 142')}`;
   }else{
-    const open=Math.min(n,5);
-    for(let i=0;i<open&&i<4;i++)a+=`<path d="${finger[i][0]}" ${f}/>${finger[i][1]}${line(i===0?'M47 77H58':i===1?'M64 64H77':i===2?'M83 73H95':'M101 87H113')}`;
-    a+=`<path d="M37 107Q39 86 59 83H94Q111 86 116 105V137Q112 157 92 160H57Q37 157 33 138Z" ${f}/><path d="M39 112L25 99Q15 90 22 80Q30 71 40 80L61 100Q69 108 63 119L55 128Q48 133 39 126Z" ${f}/>`;
-    if(open===5)a+=`<path d="M41 115L18 76Q12 64 22 58Q33 53 40 65L61 99" ${f}/>${nail('M19 63Q27 57 32 65L36 74L25 79Z')}`;
-    else a+=`<path d="M39 113L27 101Q18 92 25 83Q33 75 42 83L62 101Q70 109 64 119L56 128Q48 132 39 125Z" ${f}/>${line('M31 93L51 111')}`;
-    for(let i=open;i<4;i++){
-      const x=[43,61,80,98][i];
-      a+=`<path d="M${x} 102Q${x-5} 88 ${x+5} 83Q${x+16} 80 ${x+18} 94V111" ${f}/>`;
-    }
-    a+=`${line('M47 132Q72 143 103 130')}${line('M50 146Q72 153 96 146')}`;
+    const count=Math.min(4,n);
+    for(let i=0;i<count;i++)a+=raised(i);
+    a+=`<path d="M35 107Q37 85 58 82H96Q115 85 119 106V139Q115 158 94 161H56Q35 157 31 139Z" ${f}/>`;
+    for(let i=count;i<4;i++)a+=curled(i);
+    if(n===5)a+=`<path d="M42 116L17 72Q11 60 22 54Q34 48 41 61L67 101" ${f}/>${nail(18,58,20)}`;
+    else a+=`<path d="M42 118L25 102Q16 94 24 84Q32 76 42 85L65 104Q72 111 66 122L57 132Q49 137 42 129Z" ${f}/>${crease('M30 96L53 114')}`;
+    a+=`${crease('M48 135Q76 147 105 133')}${crease('M52 150Q76 157 99 149')}`;
   }
-  return `<svg class="hand" viewBox="0 0 150 174" role="img" aria-label="${n}">${a}</svg>`;
+  return `<svg class="hand" viewBox="0 0 158 176" role="img" aria-label="${n}">${a}</svg>`;
 }
 
 function reset(){
   timers.forEach(clearTimeout);timers=[];
-  S={inn:1,score:0,target:null,state:'idle',mode:'toss',first:0,tw:0,bk:0,pick:[null,null],balls:[0,0],runs:[0,0],log:[]};
-  $('ov').classList.remove('show');$('tossOv').classList.remove('show');buildKeys();
+  S={inn:1,score:0,target:null,state:'idle',mode:'toss',first:0,tw:0,bk:0,pick:[null,null],balls:[0,0],runs:[0,0],log:[],intro:0,tossStarted:false};
+  $('ov').classList.remove('show');$('tossOv').classList.remove('show');showTossIntro(0);clearImpacts();buildKeys();
   $('log').innerHTML='<p class="t">Play rock paper scissors to decide the toss. Picks stay hidden until the reveal.</p>';
   $('count').textContent='Ready';
   render();showHands(0,0,false);
@@ -188,12 +191,33 @@ function render(){
   $('r'+bowl()).innerHTML=`<em>${NAMES[bowl()]} · Bowler</em>`}
   const lab=T?'Start toss':S.balls[0]+S.balls[1]===0?'Bowl first ball':S.state==='break'?'Start innings 2':'Next ball';
   $('go').textContent=lab;
-  $('go').disabled=S.state==='pick'||S.state==='over'||S.state==='choose';
+  $('go').disabled=S.state==='pick'||S.state==='over'||S.state==='choose'||S.state==='intro';
   document.querySelectorAll('.keys button').forEach(x=>x.disabled=S.state!=='pick'||(ai&&x.dataset.p==='1'));
 }
 function showHands(a,b,anim,cls){
   $('h0').innerHTML=hand(a,SKIN[0]);$('h1').innerHTML=hand(b,SKIN[1]);
   if(anim){$('h0').firstChild.classList.add(cls);$('h1').firstChild.classList.add(cls)}
+}
+function animateHand(p,cls){
+  const h=$('h'+p).firstChild;if(!h)return;
+  h.classList.remove(cls);void h.offsetWidth;h.classList.add(cls);
+  timers.push(setTimeout(()=>h.classList.remove(cls),900));
+}
+function clearImpacts(){[0,1].forEach(p=>{$('fx'+p).textContent='';$('fx'+p).className='impact'})}
+function showImpact(p,text,kind){
+  const el=$('fx'+p);el.textContent=text;el.className='impact '+kind;
+  void el.offsetWidth;el.className='impact '+kind+' show';
+  timers.push(setTimeout(()=>{if(el.textContent===text){el.textContent='';el.className='impact'}},1300));
+}
+function showTossIntro(n){
+  $('introN').textContent=n||'';
+  $('introOv').classList.toggle('show',n>0);
+}
+function beginToss(){
+  if(S.mode!=='toss'||S.tossStarted)return startBall();
+  S.tossStarted=true;S.state='intro';S.intro=3;render();showTossIntro(3);
+  [2,1].forEach((n,i)=>timers.push(setTimeout(()=>{S.intro=n;showTossIntro(n);beep(320+(2-n)*90,.12)},(i+1)*1000)));
+  timers.push(setTimeout(()=>{S.intro=0;showTossIntro(0);S.state='idle';startBall()},3000));
 }
 
 function beep(f,d,t){
@@ -217,6 +241,7 @@ function startBall(){
   if(S.state==='over'||S.state==='pick')return;
   if(S.state==='break'){S.state='idle'}
   S.state='pick';S.pick=[null,null];S.bk++;clearSel();
+  S.intro=0;showTossIntro(0);clearImpacts();
   $('l0').textContent=$('l1').textContent='Choose now';
   $('l0').className=$('l1').className='lock';
   $('n0').textContent=$('n1').textContent='';
@@ -253,6 +278,8 @@ function reveal(){
   else if(B===0){runs=W;msg=say(STEAL,o)}
   else{runs=B;msg=say(RUN[B],o)}
   if(runs>=4)cls='b';
+  if(out){showImpact(bowl(),'OUT!','out');timers.push(setTimeout(()=>animateHand(bowl(),'out-pop'),100))}
+  else{showImpact(bat(),'+'+runs,'run');timers.push(setTimeout(()=>animateHand(bat(),'score-pop'),100))}
   S.score+=runs;S.runs[bat()]=S.score;S.balls[bat()]++;
   const n=S.balls[bat()];
   const log=document.createElement('p');log.className=cls;
@@ -430,7 +457,7 @@ function act(){
   if(net.role==='guest'){send({t:'go'});return}
   if(S.state==='idle'||S.state==='break'){timers.forEach(clearTimeout);timers=[];startBall()}
 }
-function again(){if(net.role==='guest'){send({t:'again'});return}reset();startBall()}
+function again(){if(net.role==='guest'){send({t:'again'});return}reset();beginToss()}
 function tossView(show,title){
   const mine=!online()||me()===S.tw;
   $('tossT').textContent=title;
@@ -440,7 +467,7 @@ function tossView(show,title){
 }
 function menu(){
   modal('Hand Cricket','Two players, one fist at a time. How do you want to play?',[
-    ['Play vs AI',()=>{unmodal();ai=true;net.role='solo';applyRole();askName(0,()=>{setName(1,'AI');startBall()})}],
+    ['Play vs AI',()=>{unmodal();ai=true;net.role='solo';applyRole();askName(0,()=>{setName(1,'AI');beginToss()})}],
     ['Create an online room',()=>{unmodal();ai=false;askName(0,host)}],
     ['Join with a room code',joinUI,1]]);
 }
@@ -462,7 +489,7 @@ function receiveGuestAction(m){
   if(!m||!m.id||m.id===net.lastAction)return;
   net.lastAction=m.id;
   if(m.t==='arrived'){net.guestConnected=true;showWait()}
-  else if(m.t==='name'){net.gname=m.name;setName(1,m.name);unmodal();startBall()}
+  else if(m.t==='name'){net.gname=m.name;setName(1,m.name);unmodal();beginToss()}
   else if(m.t==='pick')lock(1,m.n);
   else if(m.t==='go')act();
   else if(m.t==='choose'&&S.tw===1)choose(m.c);
@@ -501,7 +528,8 @@ async function join(code){
 }
 function snap(){
   const g=id=>$(id).innerHTML;
-  return {S:{inn:S.inn,score:S.score,target:S.target,state:S.state,mode:S.mode,first:S.first,tw:S.tw,balls:S.balls,runs:S.runs,bk:S.bk},names:NAMES,guestReady:!!net.gname,count:$('count').textContent,h0:g('h0'),h1:g('h1'),n0:$('n0').textContent,n1:$('n1').textContent,log:g('log'),tossShow:$('tossOv').classList.contains('show'),ovShow:$('ov').classList.contains('show'),wt:$('wt').textContent,ws:$('ws').textContent,tb:g('tb')};
+  const fx=p=>({text:$('fx'+p).textContent,cls:$('fx'+p).className});
+  return {S:{inn:S.inn,score:S.score,target:S.target,state:S.state,mode:S.mode,first:S.first,tw:S.tw,balls:S.balls,runs:S.runs,bk:S.bk,intro:S.intro,tossStarted:S.tossStarted},names:NAMES,guestReady:!!net.gname,count:$('count').textContent,h0:g('h0'),h1:g('h1'),n0:$('n0').textContent,n1:$('n1').textContent,fx:[fx(0),fx(1)],log:g('log'),tossShow:$('tossOv').classList.contains('show'),ovShow:$('ov').classList.contains('show'),wt:$('wt').textContent,ws:$('ws').textContent,tb:g('tb')};
 }
 setInterval(()=>{
   if(net.role!=='host'||!net.room)return;
@@ -515,6 +543,7 @@ function apply(d){
   $('count').textContent=d.count;
   ['h0','h1'].forEach(k=>{if($(k).innerHTML!==d[k])$(k).innerHTML=d[k]});
   $('n0').textContent=d.n0;$('n1').textContent=d.n1;
+  if(d.fx)d.fx.forEach((f,i)=>{const el=$('fx'+i);if(el.textContent!==f.text||el.className!==f.cls){el.textContent=f.text;el.className=f.cls}});
   if($('log').innerHTML!==d.log)$('log').innerHTML=d.log;
   if(mc)buildKeys();
   if(nb){
@@ -522,6 +551,7 @@ function apply(d){
     const bar=$('bar');bar.classList.remove('run');void bar.offsetWidth;bar.classList.add('run');
   }else if(S.state!=='pick'&&$('l1').textContent==='Choose now'){$('l1').textContent='Waiting'}
   render();
+  showTossIntro(d.S.intro||0);
   if(net.wait&&d.guestReady){net.wait=false;unmodal()}
   tossView(d.tossShow,d.tossShow?NAMES[S.tw]+' won the toss':'');
   $('ov').classList.toggle('show',d.ovShow);
