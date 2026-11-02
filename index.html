@@ -369,10 +369,19 @@ addEventListener('keydown',e=>{
 });
 
 /* ---------- names, rooms, online play (WebRTC via PeerJS) ---------- */
-const net={role:'local',peer:null,conn:null,code:'',hostReady:false,gname:null,wait:false,last:''};
+const net={role:'local',peer:null,conn:null,code:'',hostReady:false,gname:null,wait:false,last:'',nameTimer:null};
 const online=()=>net.role!=='local',me=()=>net.role==='guest'?1:0;
 const home=()=>location.replace(location.pathname+location.search);
 function send(m){try{net.conn&&net.conn.open&&net.conn.send(m)}catch(e){}}
+function stopNameRetry(){if(net.nameTimer){clearInterval(net.nameTimer);net.nameTimer=null}}
+function sendGuestName(){
+  // The first packet can be lost while WebRTC finishes opening its data
+  // channel. Keep reporting the guest name until the host acknowledges it.
+  stopNameRetry();
+  const report=()=>send({t:'name',name:NAMES[1]});
+  report();
+  net.nameTimer=setInterval(report,700);
+}
 function modal(t,body,btns){
   $('mt').textContent=t;$('mb').innerHTML=body;
   const bx=$('mbt');bx.innerHTML='';
@@ -433,7 +442,7 @@ function tryStart(){
   if(net.hostReady&&net.gname){setName(1,net.gname);unmodal();startBall()}
   else if(net.hostReady)showWait();
 }
-const lost=()=>modal('Connection lost','The other player left the game.',[['Back to menu',home]]);
+const lost=()=>{stopNameRetry();modal('Connection lost','The other player left the game.',[['Back to menu',home]])};
 const fail=e=>modal('Connection problem',e.type==='peer-unavailable'?'No room found with that code. Check it and try again.':'Could not connect ('+(e.type||e)+').',[['Back to menu',home]]);
 function host(){
   net.role='host';applyRole();
@@ -445,7 +454,11 @@ function host(){
     if(net.conn){cn.close();return}
     net.conn=cn;
     cn.on('data',m=>{
-      if(m.t==='name'){net.gname=m.name;tryStart()}
+      if(m.t==='name'){
+        net.gname=m.name;
+        send({t:'name-ok'});
+        tryStart();
+      }
       else if(m.t==='pick')lock(1,m.n);
       else if(m.t==='go')act();
       else if(m.t==='choose'){if(S.tw===1)choose(m.c)}
@@ -461,8 +474,16 @@ function join(code){
   net.peer.on('error',fail);
   net.peer.on('open',()=>{
     const cn=net.conn=net.peer.connect('hc-'+code,{reliable:true});
-    cn.on('open',()=>askName(1,()=>{send({t:'name',name:NAMES[1]});net.wait=true;modal('Connected','Waiting for the toss to start…',[])}));
-    cn.on('data',m=>{if(m.t==='s')apply(m.d)});
+    cn.on('open',()=>askName(1,()=>{
+      // Set this before sending. The host can respond immediately.
+      net.wait=true;
+      modal('Connected','Joining the match…',[]);
+      sendGuestName();
+    }));
+    cn.on('data',m=>{
+      if(m.t==='name-ok')stopNameRetry();
+      else if(m.t==='s')apply(m.d);
+    });
     cn.on('close',lost);
   });
 }
