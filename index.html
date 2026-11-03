@@ -500,6 +500,7 @@ function showMatchNotice(){
   $('matchOv').classList.toggle('show',active);
   clearTimeout(noticeTimer);
   if(active)noticeTimer=setTimeout(showMatchNotice,Math.max(40,S.noticeUntil-Date.now()+20));
+  else render(); // Re-enable “Bowl first ball” once the shared notice has closed.
 }
 
 // controls
