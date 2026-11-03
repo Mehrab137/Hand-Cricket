@@ -205,7 +205,7 @@ const localPlayer=()=>teamMode()?S.players.find(p=>p.id===net.uid):null;
 const localTeam=()=>teamMode()?(localPlayer()?.team??-1):me();
 const activeIdFor=t=>t===bat()?S.activeBat:S.activeBowl;
 const playerLabel=t=>{const p=teamMode()?S.players.find(x=>x.id===activeIdFor(t)):null;return p?p.name:NAMES[t]};
-const canControlSide=t=>!teamMode()||activeIdFor(t)===net.uid;
+const canControlSide=t=>teamMode()?activeIdFor(t)===net.uid:(!online()||me()===t);
 const captainFor=t=>teamPlayers(t)[0];
 const canChooseToss=()=>!teamMode()?(!online()||me()===S.tw):captainFor(S.tw)?.id===net.uid;
 
@@ -403,7 +403,11 @@ function maybePromptReview(){
   if(ai&&b===1){timers.push(setTimeout(()=>handleReview(Math.random()<.7?'use':'decline'),900));return}
   if(!online()||canControlSide(b)){
     const left=S.reviews[b];
-    const seconds=()=>Math.max(0,Math.ceil((S.reviewDeadline-Date.now())/1000));
+    // Only the host may judge the shared deadline. A guest uses a local
+    // three-second display clock so a slightly different phone clock cannot
+    // make the decision sheet appear and vanish immediately.
+    const localDeadline=net.role==='host'?S.reviewDeadline:Date.now()+3000;
+    const seconds=()=>Math.max(0,Math.ceil((localDeadline-Date.now())/1000));
     modal('You are out — take a review?',left?`You have <b>${left} review</b>. Win rock-paper-scissors to remain not out.<div class="review-clock">Decide in <b id="reviewClock">${seconds()}</b>s</div>`:'No reviews remaining.',[
       ...(left?[['Yes, review',()=>{unmodal();answerReview('use')}]]:[]),
       ['No, accept out',()=>{unmodal();answerReview('decline')},true]
@@ -662,11 +666,13 @@ function showWait(){
 function showLobby(){
   if(!teamMode()||S.mode!=='lobby'){ $('lobbyOv').classList.remove('show');return; }
   const team=t=>teamPlayers(t).map((p,i)=>`<div style="padding:7px;border-top:1px solid var(--line);color:${t?'var(--p2)':'var(--p1)'}">${i===0?'★ Captain · ':''}${p.name}</div>`).join('')||'<div style="padding:7px">Open slot</div>';
-  $('lobbyBody').innerHTML=`<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;text-align:left"><div><b style="color:var(--p1)">Team Blue</b>${team(0)}</div><div><b style="color:var(--p2)">Team Orange</b>${team(1)}</div></div><p style="font-size:12px">Need at least one player on each team. Maximum two players per team.</p>`;
+  const link=location.href.split('#')[0]+'#'+net.code;
+  const invite=net.role==='host'?`<div style="margin:14px 0 8px;padding:10px;background:rgba(0,0,0,.2);border:1px solid var(--line);border-radius:10px"><small style="color:var(--muted);text-transform:uppercase;letter-spacing:.08em">Invite code</small><code style="display:block;font:700 28px var(--head);letter-spacing:6px;color:var(--brass);margin-top:3px">${net.code}</code><div style="font-size:11px;word-break:break-all;margin-top:6px">${link}</div></div>`:'';
+  $('lobbyBody').innerHTML=`${invite}<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;text-align:left"><div><b style="color:var(--p1)">Team Blue</b>${team(0)}</div><div><b style="color:var(--p2)">Team Orange</b>${team(1)}</div></div><p style="font-size:12px">Need at least one player on each team. Maximum two players per team.</p>`;
   const bx=$('lobbyButtons');bx.innerHTML='';const mine=localPlayer();
   const add=(label,fn,sec)=>{const b=document.createElement('button');b.className='go'+(sec?' sec':'');b.textContent=label;b.onclick=fn;bx.appendChild(b)};
   if(mine&&mine.team==null){if(teamPlayers(0).length<2)add('Join Team Blue',()=>send({t:'team',team:0}));if(teamPlayers(1).length<2)add('Join Team Orange',()=>send({t:'team',team:1}));}
-  if(net.role==='host'){const ready=teamPlayers(0).length&&teamPlayers(1).length;add(ready?'Start team match':'Waiting for both teams',startTeamMatch,!ready);}
+  if(net.role==='host'){const ready=teamPlayers(0).length&&teamPlayers(1).length;add('Copy invite link',()=>navigator.clipboard?.writeText(link).then(()=>showLobby()).catch(()=>{}),true);add(ready?'Start team match':'Waiting for both teams',startTeamMatch,!ready);}
   $('lobbyOv').classList.add('show');
 }
 function startTeamMatch(){
@@ -742,6 +748,7 @@ setInterval(()=>{
 function apply(d){
   const mc=d.S.mode!==S.mode,nb=d.S.bk!==S.bk;
   Object.assign(S,d.S);
+  if(S.state!=='reviewOffer'&&$('mt').textContent==='You are out — take a review?')unmodal();
   d.names.forEach((n,i)=>{NAMES[i]=n;$('nm'+i).textContent=n});
   $('count').textContent=d.count;
   ['h0','h1'].forEach(k=>{if($(k).innerHTML!==d[k])$(k).innerHTML=d[k]});
