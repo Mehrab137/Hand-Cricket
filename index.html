@@ -380,12 +380,12 @@ function reveal(){
 }
 function finishBall(){
   const b=bat(),chased=S.inn===2&&S.score>S.target,allOut=S.wickets[b]>=S.maxWickets,oversDone=S.balls[b]>=S.maxOvers*6;
-  if(chased||allOut||oversDone){S.state='over';render();timers.push(setTimeout(()=>endInnings(),1800))}
+  if(chased||allOut||oversDone){S.state='over';render();showReviewStatus();timers.push(setTimeout(()=>endInnings(),1800))}
   else{
     if(teamMode()&&S.balls[b]>0&&S.balls[b]%6===0){
       const bowlers=teamPlayers(bowl());if(bowlers.length>1){const i=bowlers.findIndex(p=>p.id===S.activeBowl);S.activeBowl=bowlers[(i+1)%bowlers.length].id;announce(`${playerLabel(bowl())} to bowl the next over`,`${playerLabel(bat())} stays on strike.`,1800)}
     }
-    S.state='idle';render();timers.push(setTimeout(()=>{if(S.state==='idle'&&Date.now()>=S.noticeUntil)startBall()},2200))
+    S.state='idle';render();showReviewStatus();timers.push(setTimeout(()=>{if(S.state==='idle'&&Date.now()>=S.noticeUntil)startBall()},2200))
   }
 }
 function appendBallLog(msg,cls='t'){
