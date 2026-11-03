@@ -223,7 +223,8 @@ function render(){
   if(T){$('r0').innerHTML=`<em>${teamMode()?playerLabel(0):NAMES[0]}</em>`;$('r1').innerHTML=`<em>${teamMode()?playerLabel(1):NAMES[1]}</em>`}
   else{$('r'+b).innerHTML=`<em style="color:var(--brass)">${playerLabel(b)} · Batter</em>`;
   $('r'+bowl()).innerHTML=`<em>${playerLabel(bowl())} · Bowler</em>`}
-  const lab=S.mode==='lobby'?'Start match':T?'Start toss':S.balls[0]+S.balls[1]===0?'Bowl first ball':S.state==='break'?'Start innings 2':'Next ball';
+  const normalLab=S.mode==='lobby'?'Start match':T?'Start toss':S.balls[0]+S.balls[1]===0?'Bowl first ball':S.state==='break'?'Start innings 2':'Next ball';
+  const lab=teamMode()&&!T&&S.mode!=='lobby'&&!canControlSide(bowl())?'Waiting for the bowler':normalLab;
   $('go').textContent=lab;
   const lobbyReady=S.mode==='lobby'&&teamPlayers(0).length>0&&teamPlayers(1).length>0;
   $('go').disabled=(S.mode==='lobby'?!lobbyReady||net.role!=='host':S.state==='pick'||S.state==='over'||S.state==='choose'||S.state==='intro'||S.state==='reviewOffer'||Date.now()<S.noticeUntil||!canControlSide(bowl()));
@@ -693,7 +694,7 @@ function receiveGuestAction(m){
     else if(m.t==='team'&&S.mode==='lobby'){const p=S.players.find(x=>x.id===m.uid);if(p&&p.team==null&&teamPlayers(m.team).length<2)p.team=m.team}
     else if(m.t==='pick'&&m.uid===activeIdFor(m.team))lock(m.team,m.n);
     else if(m.t==='review'&&m.uid===activeIdFor(S.reviewing))handleReview(m.decision);
-    else if(m.t==='go'&&m.uid===activeIdFor(bowl()))act();
+    else if(m.t==='go'&&m.uid===activeIdFor(bowl())&&(S.state==='idle'||S.state==='break')&&Date.now()>=S.noticeUntil){timers.forEach(clearTimeout);timers=[];startBall()}
     else if(m.t==='choose'&&m.uid===captainFor(S.tw)?.id)choose(m.c);
     else if(m.t==='again')again();
     showLobby();return;
