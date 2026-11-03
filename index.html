@@ -488,7 +488,7 @@ function beginStrategy(kind,team,role){
   const roster=teamPlayers(team),current=role==='bat'?S.activeBat:S.activeBowl;
   const options=kind==='nextBowler'?roster.filter(p=>p.id!==current):roster;
   if(options.length===1){selectStrategy(options[0].id,kind,team,role);return}
-  S.strategy={kind,team,role,options:options.map(p=>p.id)};S.strategyId++;net.seenStrategy=-1;S.state='strategy';render();showStrategyStatus();maybePromptStrategy();
+  S.strategy={kind,team,role,options:options.map(p=>p.id)};S.strategyId++;net.seenStrategy=-1;S.state='strategy';render();showStrategyStatus();maybePromptStrategy();publishState();
 }
 function maybePromptStrategy(){
   if(!S.strategy||net.seenStrategy===S.strategyId)return;
@@ -503,9 +503,9 @@ function selectStrategy(id,kind=S.strategy?.kind,team=S.strategy?.team,role=S.st
   if(!kind||!team&&team!==0)return;
   if(role==='bat')S.activeBat=id;else S.activeBowl=id;
   S.strategy=null;
-  if(kind==='openingBat'){beginStrategy('openingBowl',1-S.first,'bowl');return}
-  if(kind==='openingBowl'){S.state='idle';announce(`${playerLabel(bat())} opens the batting`,`${playerLabel(bowl())} takes the new ball.`,1800);render();showStrategyStatus();return}
-  S.state='idle';announce(`${role==='bat'?playerLabel(bat()):playerLabel(bowl())} is selected`,role==='bat'?'Ready for the next ball.':'New over, new bowler.',1200);render();showStrategyStatus();timers.push(setTimeout(()=>{if(S.state==='idle')startBall()},1400));
+  if(kind==='openingBat'){beginStrategy('openingBowl',1-S.first,'bowl');publishState();return}
+  if(kind==='openingBowl'){S.state='idle';announce(`${playerLabel(bat())} opens the batting`,`${playerLabel(bowl())} takes the new ball.`,1800);render();showStrategyStatus();publishState();return}
+  S.state='idle';announce(`${role==='bat'?playerLabel(bat()):playerLabel(bowl())} is selected`,role==='bat'?'Ready for the next ball.':'New over, new bowler.',1200);render();showStrategyStatus();publishState();timers.push(setTimeout(()=>{if(S.state==='idle')startBall()},1400));
 }
 function showStrategyStatus(){
   const ov=$('strategyOv'),q=S.strategy;
@@ -866,6 +866,11 @@ function snap(){
   const g=id=>$(id).innerHTML;
   const fx=p=>({text:$('fx'+p).textContent,cls:$('fx'+p).className});
   return {S:{inn:S.inn,score:S.score,target:S.target,state:S.state,mode:S.mode,first:S.first,tw:S.tw,bk:S.bk,pick:S.pick,balls:S.balls,runs:S.runs,wickets:S.wickets,reviews:S.reviews,maxOvers:S.maxOvers,maxWickets:S.maxWickets,reviewing:S.reviewing,reviewId:S.reviewId,pendingOut:S.pendingOut,reviewDeadline:S.reviewDeadline,noticeId:S.noticeId,noticeTitle:S.noticeTitle,noticeDetail:S.noticeDetail,noticeUntil:S.noticeUntil,resultPhase:S.resultPhase,resultTitle:S.resultTitle,resultDetail:S.resultDetail,players:S.players,connected:S.connected,activeBat:S.activeBat,activeBowl:S.activeBowl,figures:S.figures,batting:S.batting,strategy:S.strategy,strategyId:S.strategyId,intro:S.intro,tossStarted:S.tossStarted,cuffs:S.cuffs,themeReady:S.themeReady,themePrompt:S.themePrompt},names:NAMES,guestReady:true,count:$('count').textContent,h0:g('h0'),h1:g('h1'),n0:$('n0').textContent,n1:$('n1').textContent,fx:[fx(0),fx(1)],log:g('log'),tossShow:$('tossOv').classList.contains('show'),ovShow:$('ov').classList.contains('show'),wt:$('wt').textContent,ws:$('ws').textContent,tb:g('tb')};
+}
+function publishState(){
+  if(net.role!=='host'||!net.room)return;
+  const d=snap();net.last=JSON.stringify(d);
+  net.room.child('state').set(d).catch(fail);
 }
 setInterval(()=>{
   if(net.role!=='host'||!net.room)return;
