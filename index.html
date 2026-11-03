@@ -197,7 +197,7 @@ function reset(){
   timers.forEach(clearTimeout);timers=[];
   const oldCuffs=S&&S.cuffs?S.cuffs:['#15191f','#15191f'];
   const oldOvers=S&&S.maxOvers||1,oldWickets=S&&S.maxWickets||1;
-  S={inn:1,score:0,target:null,state:'idle',mode:'toss',first:0,tw:0,bk:0,pick:[null,null],balls:[0,0],runs:[0,0],wickets:[0,0],reviews:[1,1],maxOvers:oldOvers,maxWickets:oldWickets,reviewing:null,reviewId:0,pendingOut:null,reviewDeadline:0,noticeId:0,noticeTitle:'',noticeDetail:'',noticeUntil:0,resultPhase:0,resultTitle:'',resultDetail:'',players:null,connected:{},activeBat:null,activeBowl:null,figures:{},batting:{},strategy:null,strategyId:'',syncRevision:0,log:[],intro:0,tossStarted:false,cuffs:oldCuffs,themeReady:[true,true],themePrompt:false};
+  S={inn:1,score:0,target:null,state:'idle',mode:'toss',first:0,tw:0,tossChoice:'',matchStartAt:0,bk:0,pick:[null,null],balls:[0,0],runs:[0,0],wickets:[0,0],reviews:[1,1],maxOvers:oldOvers,maxWickets:oldWickets,reviewing:null,reviewId:0,pendingOut:null,reviewDeadline:0,noticeId:0,noticeTitle:'',noticeDetail:'',noticeUntil:0,resultPhase:0,resultTitle:'',resultDetail:'',players:null,connected:{},activeBat:null,activeBowl:null,figures:{},batting:{},strategy:null,strategyId:'',syncRevision:0,log:[],intro:0,tossStarted:false,cuffs:oldCuffs,themeReady:[true,true],themePrompt:false};
   $('ov').classList.remove('show');$('winOv').classList.remove('show');$('matchOv').classList.remove('show');$('reviewOv').classList.remove('show');$('strategyOv').classList.remove('show');$('tossOv').classList.remove('show');showTossIntro(0);clearImpacts();buildKeys();
   $('log').innerHTML='<p class="t">Play rock paper scissors to decide the toss. Picks stay hidden until the reveal.</p>';
   $('count').textContent='Ready';
@@ -348,6 +348,7 @@ function startBall(){
   if(ai)timers.push(setTimeout(()=>lock(1,Math.floor(Math.random()*(rps?3:7))),300+Math.random()*2000));
   timers.push(setTimeout(reveal,online()?3400:3000));
   render();
+  if(teamMode()&&net.role==='host')publishState();
 }
 function lock(p,n){
   if(S.state!=='pick')return;
@@ -499,7 +500,8 @@ function maybePromptStrategy(){
   const q=S.strategy;if(captainFor(q.team)?.id!==net.uid)return;
   net.seenStrategy=S.strategyId;
   net.strategyModal=S.strategyId;
-  const title=q.role==='bat'?(q.phase==='openingBat'?'Choose opening batter':'Choose next batter'):(q.phase==='openingBowl'?'Choose opening bowler':'Choose next bowler');
+  const opening=q.phase==='openingWinner'||q.phase==='openingOpponent';
+  const title=q.role==='bat'?(opening?'Choose opening batter':'Choose next batter'):(opening?'Choose opening bowler':'Choose next bowler');
   const buttons=q.options.map(id=>{const p=S.players.find(x=>x.id===id);return [p.name,()=>{unmodal();answerStrategy(id)}]});
   modal(title,'Captain’s call.',buttons);
 }
@@ -512,9 +514,15 @@ function answerStrategy(id){
 function selectStrategy(id){
   const q=S.strategy;if(!q||!q.options.includes(id))return;
   if(q.role==='bat')S.activeBat=id;else S.activeBowl=id;
-  if(q.phase==='openingBat'){beginStrategy('openingBowl',1-S.first,'bowl');return}
+  // The toss winner selects first, then the other captain selects their
+  // opposite role. This order stays the same whether the winner bats or bowls.
+  if(q.phase==='openingWinner'){
+    const other=1-S.tw;
+    beginStrategy('openingOpponent',other,S.tossChoice==='bat'?'bowl':'bat');
+    return;
+  }
   S.strategy=null;net.strategyModal='';
-  if(q.phase==='openingBowl'){S.state='idle';announce(`${playerLabel(bat())} opens the batting`,`${playerLabel(bowl())} takes the new ball.`,1800);render();showStrategyStatus();publishState();return}
+  if(q.phase==='openingOpponent'){beginMatchCountdown();return}
   S.state='idle';announce(`${q.role==='bat'?playerLabel(bat()):playerLabel(bowl())} is selected`,q.role==='bat'?'Ready for the next ball.':'New over, new bowler.',1200);render();showStrategyStatus();publishState();timers.push(setTimeout(()=>{if(S.state==='idle')startBall()},1400));
 }
 function showStrategyStatus(){
@@ -523,9 +531,23 @@ function showStrategyStatus(){
   if(captainFor(q.team)?.id===net.uid){ov.classList.remove('show');return}
   const captain=captainFor(q.team)?.name||NAMES[q.team];
   const isBatter=q.role==='bat';
-  $('strategyTitle').textContent=`${captain} is choosing a ${isBatter?'batter':'bowler'}`;
-  $('strategyDetail').textContent=isBatter?'Captain is deciding who takes the crease next.':'Captain is deciding who will bowl the next over.';
+  $('strategyTitle').textContent=`${NAMES[q.team]} is choosing a ${isBatter?'batter':'bowler'}`;
+  $('strategyDetail').textContent=`${captain} is making the captain’s call.`;
   ov.classList.add('show');
+}
+function beginOpeningStrategy(){
+  if(!teamMode()||!S.tossChoice)return;
+  beginStrategy('openingWinner',S.tw,S.tossChoice);
+}
+function beginMatchCountdown(){
+  S.strategy=null;net.strategyModal='';S.state='countdown';S.matchStartAt=Date.now()+5000;
+  announce('Match starts in 5',`${playerLabel(bat())} opens the batting. ${playerLabel(bowl())} has the new ball.`,5000);
+  render();showStrategyStatus();publishState();
+  timers.push(setTimeout(()=>{
+    if(S.state!=='countdown'||Date.now()<S.matchStartAt)return;
+    S.matchStartAt=0;S.state='idle';S.noticeUntil=0;showMatchNotice();
+    startBall();publishState();
+  },5050));
 }
 function flash(c){if(!c)return;const f=$('flash');f.className='flash';void f.offsetWidth;f.className='flash '+c}
 
@@ -547,9 +569,10 @@ function tossReveal(auto){
   const w=d===1?0:1;S.tw=w;
   p.className='b';p.textContent=`Toss: ${NM[w===0?a:b]} beats ${NM[w===0?b:a]}. ${teamMode()?captainFor(w).name:NAMES[w]} wins the toss.`;
   $('log').prepend(p);
-  S.state='choose';render();
+  S.state='choose';render();if(teamMode())publishState();
   timers.push(setTimeout(()=>{
-    tossView(true,(teamMode()?captainFor(w).name:NAMES[w])+' won the toss');
+    tossView(true,NAMES[w]+' won the toss');
+    if(teamMode())publishState();
     if(ai&&w===1)setTimeout(()=>choose(Math.random()<.5?'bat':'bowl'),1200);
     else if(!online()||canChooseToss())$('cBat').focus();
   },1500));
@@ -558,7 +581,15 @@ function choose(c){
   if(S.state!=='choose')return;
   $('tossOv').classList.remove('show');
   S.first=c==='bat'?S.tw:1-S.tw;S.mode='game';S.state='idle';
-  if(teamMode()){S.activeBat=null;S.activeBowl=null;beginStrategy('openingBat',S.first,'bat');return}
+  if(teamMode()){
+    S.tossChoice=c;S.activeBat=null;S.activeBowl=null;S.state='decisionNotice';
+    announce(`${NAMES[S.tw]} decided to ${c} first`,`${NAMES[S.first]} will bat first.`,2000);
+    render();publishState();
+    timers.push(setTimeout(()=>{
+      if(S.state==='decisionNotice'&&S.tossChoice===c)beginOpeningStrategy();
+    },2050));
+    return;
+  }
   const p=document.createElement('p');p.className='t';
   const chooser=teamMode()?captainFor(S.tw).name:NAMES[S.tw];
   p.textContent=`${chooser} chose to ${c}. ${teamMode()?NAMES[S.first]:NAMES[S.first]} bats first.`;
@@ -617,10 +648,13 @@ function announce(title,detail,duration){
 }
 function showMatchNotice(){
   const active=Date.now()<S.noticeUntil;
-  $('matchTitle').textContent=S.noticeTitle||'';$('matchDetail').textContent=S.noticeDetail||'';
+  const untilStart=Number(S.matchStartAt)||0;
+  const secondsLeft=untilStart>Date.now()?Math.ceil((untilStart-Date.now())/1000):0;
+  $('matchTitle').textContent=secondsLeft?`Match starts in ${secondsLeft}`:(S.noticeTitle||'');
+  $('matchDetail').textContent=S.noticeDetail||'';
   $('matchOv').classList.toggle('show',active);
   clearTimeout(noticeTimer);
-  if(active)noticeTimer=setTimeout(showMatchNotice,Math.max(40,S.noticeUntil-Date.now()+20));
+  if(active)noticeTimer=setTimeout(showMatchNotice,secondsLeft?Math.min(250,Math.max(40,untilStart-Date.now()+20)):Math.max(40,S.noticeUntil-Date.now()+20));
   else render(); // Re-enable “Bowl first ball” once the shared notice has closed.
 }
 
@@ -770,7 +804,8 @@ function again(){
 function tossView(show,title){
   const mine=canChooseToss();
   $('tossT').textContent=title;
-  $('tossSub').textContent=mine?'Choose how to start the match.':'Waiting for '+NAMES[S.tw]+' to choose…';
+  const captain=teamMode()?captainFor(S.tw)?.name:NAMES[S.tw];
+  $('tossSub').textContent=mine?'Choose whether your team bats or bowls.':`${captain||NAMES[S.tw]} is choosing whether ${NAMES[S.tw]} bats or bowls.`;
   $('tossBtns').style.display=mine?'flex':'none';
   $('tossOv').classList.toggle('show',show);
 }
@@ -808,7 +843,7 @@ function showLobby(){
 function startTeamMatch(){
   if(net.role!=='host'||S.mode!=='lobby'||!teamPlayers(0).length||!teamPlayers(1).length)return;
   S.activeBat=captainFor(0).id;S.activeBowl=captainFor(1).id;S.mode='toss';S.state='idle';
-  $('lobbyOv').classList.remove('show');buildKeys();render();beginToss();
+  $('lobbyOv').classList.remove('show');buildKeys();render();publishState();beginToss();
 }
 const fail=e=>{
   const msg=typeof e==='string'?e:(e&&e.message?e.message:'Could not connect to the game room.');
@@ -875,7 +910,7 @@ async function join(code){
 function snap(){
   const g=id=>$(id).innerHTML;
   const fx=p=>({text:$('fx'+p).textContent,cls:$('fx'+p).className});
-  return {S:{inn:S.inn,score:S.score,target:S.target,state:S.state,mode:S.mode,first:S.first,tw:S.tw,bk:S.bk,pick:S.pick,balls:S.balls,runs:S.runs,wickets:S.wickets,reviews:S.reviews,maxOvers:S.maxOvers,maxWickets:S.maxWickets,reviewing:S.reviewing,reviewId:S.reviewId,pendingOut:S.pendingOut,reviewDeadline:S.reviewDeadline,noticeId:S.noticeId,noticeTitle:S.noticeTitle,noticeDetail:S.noticeDetail,noticeUntil:S.noticeUntil,resultPhase:S.resultPhase,resultTitle:S.resultTitle,resultDetail:S.resultDetail,players:S.players,connected:S.connected,activeBat:S.activeBat,activeBowl:S.activeBowl,figures:S.figures,batting:S.batting,strategy:S.strategy,strategyId:S.strategyId,syncRevision:S.syncRevision,intro:S.intro,tossStarted:S.tossStarted,cuffs:S.cuffs,themeReady:S.themeReady,themePrompt:S.themePrompt},names:NAMES,guestReady:true,count:$('count').textContent,h0:g('h0'),h1:g('h1'),n0:$('n0').textContent,n1:$('n1').textContent,fx:[fx(0),fx(1)],log:g('log'),tossShow:$('tossOv').classList.contains('show'),ovShow:$('ov').classList.contains('show'),wt:$('wt').textContent,ws:$('ws').textContent,tb:g('tb')};
+  return {S:{inn:S.inn,score:S.score,target:S.target,state:S.state,mode:S.mode,first:S.first,tw:S.tw,tossChoice:S.tossChoice,matchStartAt:S.matchStartAt,bk:S.bk,pick:S.pick,balls:S.balls,runs:S.runs,wickets:S.wickets,reviews:S.reviews,maxOvers:S.maxOvers,maxWickets:S.maxWickets,reviewing:S.reviewing,reviewId:S.reviewId,pendingOut:S.pendingOut,reviewDeadline:S.reviewDeadline,noticeId:S.noticeId,noticeTitle:S.noticeTitle,noticeDetail:S.noticeDetail,noticeUntil:S.noticeUntil,resultPhase:S.resultPhase,resultTitle:S.resultTitle,resultDetail:S.resultDetail,players:S.players,connected:S.connected,activeBat:S.activeBat,activeBowl:S.activeBowl,figures:S.figures,batting:S.batting,strategy:S.strategy,strategyId:S.strategyId,syncRevision:S.syncRevision,intro:S.intro,tossStarted:S.tossStarted,cuffs:S.cuffs,themeReady:S.themeReady,themePrompt:S.themePrompt},names:NAMES,guestReady:true,count:$('count').textContent,h0:g('h0'),h1:g('h1'),n0:$('n0').textContent,n1:$('n1').textContent,fx:[fx(0),fx(1)],log:g('log'),tossShow:$('tossOv').classList.contains('show'),ovShow:$('ov').classList.contains('show'),wt:$('wt').textContent,ws:$('ws').textContent,tb:g('tb')};
 }
 function publishState(){
   if(net.role!=='host'||!net.room)return;
