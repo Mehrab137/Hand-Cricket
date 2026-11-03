@@ -488,7 +488,7 @@ function beginStrategy(kind,team,role){
   const roster=teamPlayers(team),current=role==='bat'?S.activeBat:S.activeBowl;
   const options=kind==='nextBowler'?roster.filter(p=>p.id!==current):roster;
   if(options.length===1){selectStrategy(options[0].id,kind,team,role);return}
-  S.strategy={kind,team,role,options:options.map(p=>p.id)};S.strategyId++;S.state='strategy';render();showStrategyStatus();maybePromptStrategy();
+  S.strategy={kind,team,role,options:options.map(p=>p.id)};S.strategyId++;net.seenStrategy=-1;S.state='strategy';render();showStrategyStatus();maybePromptStrategy();
 }
 function maybePromptStrategy(){
   if(!S.strategy||net.seenStrategy===S.strategyId)return;
@@ -502,8 +502,8 @@ function answerStrategy(id){if(net.role==='host')selectStrategy(id);else send({t
 function selectStrategy(id,kind=S.strategy?.kind,team=S.strategy?.team,role=S.strategy?.role){
   if(!kind||!team&&team!==0)return;
   if(role==='bat')S.activeBat=id;else S.activeBowl=id;
-  if(kind==='openingBat'){beginStrategy('openingBowl',1-S.first,'bowl');return}
   S.strategy=null;
+  if(kind==='openingBat'){beginStrategy('openingBowl',1-S.first,'bowl');return}
   if(kind==='openingBowl'){S.state='idle';announce(`${playerLabel(bat())} opens the batting`,`${playerLabel(bowl())} takes the new ball.`,1800);render();showStrategyStatus();return}
   S.state='idle';announce(`${role==='bat'?playerLabel(bat()):playerLabel(bowl())} is selected`,role==='bat'?'Ready for the next ball.':'New over, new bowler.',1200);render();showStrategyStatus();timers.push(setTimeout(()=>{if(S.state==='idle')startBall()},1400));
 }
@@ -787,10 +787,10 @@ function showLobby(){
   $('lobbyBody').innerHTML=`${invite}<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;text-align:left"><div><b style="color:var(--p1)">Team Blue</b>${team(0)}</div><div><b style="color:var(--p2)">Team Orange</b>${team(1)}</div></div><p style="font-size:12px">Need at least one player on each team. Maximum two players per team.</p>`;
   const bx=$('lobbyButtons');bx.innerHTML='';const mine=localPlayer();
   const add=(label,fn,sec)=>{const b=document.createElement('button');b.className='go'+(sec?' sec':'');b.textContent=label;b.onclick=fn;bx.appendChild(b)};
-  const hostPlayer=S.players[0];
-  if(mine&&mine.id!==hostPlayer.id){
-    if(mine.team!==0&&teamPlayers(0).length<2)add(mine.team==null?'Join Team Blue':'Switch to Team Blue',()=>send({t:'team',team:0}));
-    if(mine.team!==1&&teamPlayers(1).length<2)add(mine.team==null?'Join Team Orange':'Switch to Team Orange',()=>send({t:'team',team:1}));
+  const chooseTeam=t=>{if(net.role==='host'){if(mine.team!==t)moveToTeam(mine,t);render();showLobby()}else send({t:'team',team:t})};
+  if(mine){
+    if(mine.team!==0&&teamPlayers(0).length<2)add(mine.team==null?'Join Team Blue':'Switch to Team Blue',()=>chooseTeam(0));
+    if(mine.team!==1&&teamPlayers(1).length<2)add(mine.team==null?'Join Team Orange':'Switch to Team Orange',()=>chooseTeam(1));
   }
   if(net.role==='host'){const ready=teamPlayers(0).length&&teamPlayers(1).length;add('Copy invite link',()=>navigator.clipboard?.writeText(link).then(()=>showLobby()).catch(()=>{}),true);add(ready?'Start team match':'Waiting for both teams',startTeamMatch,!ready);}
   $('lobbyOv').classList.add('show');
