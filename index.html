@@ -195,7 +195,7 @@ function reset(){
   timers.forEach(clearTimeout);timers=[];
   const oldCuffs=S&&S.cuffs?S.cuffs:['#15191f','#15191f'];
   const oldOvers=S&&S.maxOvers||1,oldWickets=S&&S.maxWickets||1;
-  S={inn:1,score:0,target:null,state:'idle',mode:'toss',first:0,tw:0,bk:0,pick:[null,null],balls:[0,0],runs:[0,0],wickets:[0,0],reviews:[1,1],maxOvers:oldOvers,maxWickets:oldWickets,reviewing:null,reviewId:0,pendingOut:null,reviewDeadline:0,noticeId:0,noticeTitle:'',noticeDetail:'',noticeUntil:0,resultPhase:0,resultTitle:'',resultDetail:'',players:null,connected:{},activeBat:null,activeBowl:null,figures:{},batting:{},log:[],intro:0,tossStarted:false,cuffs:oldCuffs,themeReady:[true,true],themePrompt:false};
+  S={inn:1,score:0,target:null,state:'idle',mode:'toss',first:0,tw:0,bk:0,pick:[null,null],balls:[0,0],runs:[0,0],wickets:[0,0],reviews:[1,1],maxOvers:oldOvers,maxWickets:oldWickets,reviewing:null,reviewId:0,pendingOut:null,reviewDeadline:0,noticeId:0,noticeTitle:'',noticeDetail:'',noticeUntil:0,resultPhase:0,resultTitle:'',resultDetail:'',players:null,connected:{},activeBat:null,activeBowl:null,figures:{},batting:{},strategy:null,strategyId:0,log:[],intro:0,tossStarted:false,cuffs:oldCuffs,themeReady:[true,true],themePrompt:false};
   $('ov').classList.remove('show');$('winOv').classList.remove('show');$('matchOv').classList.remove('show');$('reviewOv').classList.remove('show');$('tossOv').classList.remove('show');showTossIntro(0);clearImpacts();buildKeys();
   $('log').innerHTML='<p class="t">Play rock paper scissors to decide the toss. Picks stay hidden until the reveal.</p>';
   $('count').textContent='Ready';
@@ -247,7 +247,7 @@ function render(){
   const lab=teamMode()&&!T&&S.mode!=='lobby'&&!canControlSide(bowl())?'Waiting for the bowler':normalLab;
   $('go').textContent=lab;
   const lobbyReady=S.mode==='lobby'&&teamPlayers(0).length>0&&teamPlayers(1).length>0;
-  $('go').disabled=(S.mode==='lobby'?!lobbyReady||net.role!=='host':S.state==='pick'||S.state==='over'||S.state==='choose'||S.state==='intro'||S.state==='reviewOffer'||Date.now()<S.noticeUntil||!canControlSide(bowl()));
+  $('go').disabled=(S.mode==='lobby'?!lobbyReady||net.role!=='host':S.state==='pick'||S.state==='strategy'||S.state==='over'||S.state==='choose'||S.state==='intro'||S.state==='reviewOffer'||Date.now()<S.noticeUntil||!canControlSide(bowl()));
   document.querySelectorAll('.keys button').forEach(x=>x.disabled=S.state!=='pick'||(ai&&x.dataset.p==='1')||!canControlSide(+x.dataset.p));
 }
 function showHands(a,b,anim,cls){
@@ -395,9 +395,7 @@ function finishBall(){
   const b=bat(),chased=S.inn===2&&S.score>S.target,allOut=S.wickets[b]>=S.maxWickets,oversDone=S.balls[b]>=S.maxOvers*6;
   if(chased||allOut||oversDone){S.state='over';render();showReviewStatus();timers.push(setTimeout(()=>endInnings(),1800))}
   else{
-    if(teamMode()&&S.balls[b]>0&&S.balls[b]%6===0){
-      const bowlers=teamPlayers(bowl());if(bowlers.length>1){const i=bowlers.findIndex(p=>p.id===S.activeBowl);S.activeBowl=bowlers[(i+1)%bowlers.length].id;announce(`${playerLabel(bowl())} to bowl the next over`,`${playerLabel(bat())} stays on strike.`,1800)}
-    }
+    if(teamMode()&&S.balls[b]>0&&S.balls[b]%6===0&&teamPlayers(bowl()).length>1){beginStrategy('nextBowler',bowl(),'bowl');return}
     S.state='idle';render();showReviewStatus();timers.push(setTimeout(()=>{if(S.state==='idle'&&Date.now()>=S.noticeUntil)startBall()},2200))
   }
 }
@@ -411,7 +409,9 @@ function finalizeOut(){
   S.mode='game';S.pendingOut=null;S.reviewing=null;S.reviewDeadline=0;buildKeys();S.balls[b]++;S.wickets[b]++;addBatting(0,true);addBowlerFigure(0,true);
   if(teamMode()){const batters=teamPlayers(b);if(batters.length>1){const i=batters.findIndex(x=>x.id===S.activeBat);S.activeBat=batters[(i+1)%batters.length].id}}
   showImpact(bowl(),'OUT!','out');timers.push(setTimeout(()=>animateHand(bowl(),'out-pop'),100));
-  appendBallLog(p.msg,'o');flash('out');beep(140,.5,'sawtooth');render();showReviewStatus();finishBall();
+  appendBallLog(p.msg,'o');flash('out');beep(140,.5,'sawtooth');render();showReviewStatus();
+  if(teamMode()&&teamPlayers(b).length>1&&S.wickets[b]<S.maxWickets){beginStrategy('nextBatter',b,'bat');return}
+  finishBall();
 }
 function surviveReview(){
   const b=bat();S.mode='game';S.pendingOut=null;S.reviewing=null;S.reviewDeadline=0;buildKeys();S.balls[b]++;addBatting();addBowlerFigure();
@@ -482,6 +482,29 @@ function showReviewStatus(){
   }
   status.classList.remove('show');
 }
+function beginStrategy(kind,team,role){
+  const roster=teamPlayers(team),current=role==='bat'?S.activeBat:S.activeBowl;
+  const options=kind==='nextBowler'?roster.filter(p=>p.id!==current):roster;
+  if(options.length===1){selectStrategy(options[0].id,kind,team,role);return}
+  S.strategy={kind,team,role,options:options.map(p=>p.id)};S.strategyId++;S.state='strategy';render();maybePromptStrategy();
+}
+function maybePromptStrategy(){
+  if(!S.strategy||net.seenStrategy===S.strategyId)return;
+  const q=S.strategy;if(captainFor(q.team)?.id!==net.uid)return;
+  net.seenStrategy=S.strategyId;
+  const title=q.role==='bat'?(q.kind==='openingBat'?'Choose opening batter':'Choose next batter'):(q.kind==='openingBowl'?'Choose opening bowler':'Choose next bowler');
+  const buttons=q.options.map(id=>{const p=S.players.find(x=>x.id===id);return [p.name,()=>{unmodal();answerStrategy(id)}]});
+  modal(title,'Captain’s call.',buttons);
+}
+function answerStrategy(id){if(net.role==='host')selectStrategy(id);else send({t:'strategy',id})}
+function selectStrategy(id,kind=S.strategy?.kind,team=S.strategy?.team,role=S.strategy?.role){
+  if(!kind||!team&&team!==0)return;
+  if(role==='bat')S.activeBat=id;else S.activeBowl=id;
+  if(kind==='openingBat'){beginStrategy('openingBowl',1-S.first,'bowl');return}
+  S.strategy=null;
+  if(kind==='openingBowl'){S.state='idle';announce(`${playerLabel(bat())} opens the batting`,`${playerLabel(bowl())} takes the new ball.`,1800);render();return}
+  S.state='idle';announce(`${role==='bat'?playerLabel(bat()):playerLabel(bowl())} is selected`,role==='bat'?'Ready for the next ball.':'New over, new bowler.',1200);render();timers.push(setTimeout(()=>{if(S.state==='idle')startBall()},1400));
+}
 function flash(c){if(!c)return;const f=$('flash');f.className='flash';void f.offsetWidth;f.className='flash '+c}
 
 function tossReveal(auto){
@@ -513,7 +536,7 @@ function choose(c){
   if(S.state!=='choose')return;
   $('tossOv').classList.remove('show');
   S.first=c==='bat'?S.tw:1-S.tw;S.mode='game';S.state='idle';
-  if(teamMode()){S.activeBat=captainFor(S.first).id;S.activeBowl=captainFor(1-S.first).id}
+  if(teamMode()){S.activeBat=null;S.activeBowl=null;beginStrategy('openingBat',S.first,'bat');return}
   const p=document.createElement('p');p.className='t';
   const chooser=teamMode()?captainFor(S.tw).name:NAMES[S.tw];
   p.textContent=`${chooser} chose to ${c}. ${teamMode()?NAMES[S.first]:NAMES[S.first]} bats first.`;
@@ -634,7 +657,7 @@ const firebaseConfig={
 };
 const fbApp=firebase.initializeApp(firebaseConfig),fbAuth=firebase.auth(),fbDb=firebase.database();
 let authPromise=null;
-const net={role:'local',code:'',room:null,uid:'',wait:false,last:'',lastAction:'',seenReview:-1};
+const net={role:'local',code:'',room:null,uid:'',wait:false,last:'',lastAction:'',seenReview:-1,seenStrategy:-1};
 const online=()=>net.role==='host'||net.role==='guest'||net.role==='player',me=()=>net.role==='guest'?1:0;
 const home=()=>location.replace(location.pathname+location.search);
 function ensureAuth(){
@@ -778,6 +801,7 @@ function receiveGuestAction(m){
     else if(m.t==='team'&&S.mode==='lobby'){const p=S.players.find(x=>x.id===m.uid);if(p&&p.id!==S.players[0].id&&p.team!==m.team&&teamPlayers(m.team).length<2)moveToTeam(p,m.team)}
     else if(m.t==='pick'&&m.uid===(S.mode==='review'?captainFor(m.team)?.id:activeIdFor(m.team)))lock(m.team,m.n);
     else if(m.t==='review'&&m.uid===activeIdFor(S.reviewing))handleReview(m.decision);
+    else if(m.t==='strategy'&&S.strategy&&m.uid===captainFor(S.strategy.team)?.id&&S.strategy.options.includes(m.id))selectStrategy(m.id);
     else if(m.t==='go'&&m.uid===activeIdFor(bowl())&&(S.state==='idle'||S.state==='break')&&Date.now()>=S.noticeUntil){timers.forEach(clearTimeout);timers=[];startBall()}
     else if(m.t==='choose'&&m.uid===captainFor(S.tw)?.id)choose(m.c);
     else if(m.t==='again')again();
@@ -829,7 +853,7 @@ async function join(code){
 function snap(){
   const g=id=>$(id).innerHTML;
   const fx=p=>({text:$('fx'+p).textContent,cls:$('fx'+p).className});
-  return {S:{inn:S.inn,score:S.score,target:S.target,state:S.state,mode:S.mode,first:S.first,tw:S.tw,bk:S.bk,pick:S.pick,balls:S.balls,runs:S.runs,wickets:S.wickets,reviews:S.reviews,maxOvers:S.maxOvers,maxWickets:S.maxWickets,reviewing:S.reviewing,reviewId:S.reviewId,pendingOut:S.pendingOut,reviewDeadline:S.reviewDeadline,noticeId:S.noticeId,noticeTitle:S.noticeTitle,noticeDetail:S.noticeDetail,noticeUntil:S.noticeUntil,resultPhase:S.resultPhase,resultTitle:S.resultTitle,resultDetail:S.resultDetail,players:S.players,connected:S.connected,activeBat:S.activeBat,activeBowl:S.activeBowl,figures:S.figures,batting:S.batting,intro:S.intro,tossStarted:S.tossStarted,cuffs:S.cuffs,themeReady:S.themeReady,themePrompt:S.themePrompt},names:NAMES,guestReady:true,count:$('count').textContent,h0:g('h0'),h1:g('h1'),n0:$('n0').textContent,n1:$('n1').textContent,fx:[fx(0),fx(1)],log:g('log'),tossShow:$('tossOv').classList.contains('show'),ovShow:$('ov').classList.contains('show'),wt:$('wt').textContent,ws:$('ws').textContent,tb:g('tb')};
+  return {S:{inn:S.inn,score:S.score,target:S.target,state:S.state,mode:S.mode,first:S.first,tw:S.tw,bk:S.bk,pick:S.pick,balls:S.balls,runs:S.runs,wickets:S.wickets,reviews:S.reviews,maxOvers:S.maxOvers,maxWickets:S.maxWickets,reviewing:S.reviewing,reviewId:S.reviewId,pendingOut:S.pendingOut,reviewDeadline:S.reviewDeadline,noticeId:S.noticeId,noticeTitle:S.noticeTitle,noticeDetail:S.noticeDetail,noticeUntil:S.noticeUntil,resultPhase:S.resultPhase,resultTitle:S.resultTitle,resultDetail:S.resultDetail,players:S.players,connected:S.connected,activeBat:S.activeBat,activeBowl:S.activeBowl,figures:S.figures,batting:S.batting,strategy:S.strategy,strategyId:S.strategyId,intro:S.intro,tossStarted:S.tossStarted,cuffs:S.cuffs,themeReady:S.themeReady,themePrompt:S.themePrompt},names:NAMES,guestReady:true,count:$('count').textContent,h0:g('h0'),h1:g('h1'),n0:$('n0').textContent,n1:$('n1').textContent,fx:[fx(0),fx(1)],log:g('log'),tossShow:$('tossOv').classList.contains('show'),ovShow:$('ov').classList.contains('show'),wt:$('wt').textContent,ws:$('ws').textContent,tb:g('tb')};
 }
 setInterval(()=>{
   if(net.role!=='host'||!net.room)return;
@@ -856,6 +880,7 @@ function apply(d){
   showTossIntro(d.S.intro||0);
   if(net.wait&&d.guestReady){net.wait=false;unmodal()}
   maybePromptReview();
+  maybePromptStrategy();
   showReviewStatus();
   if(S.themePrompt&&net.role==='guest'&&!net.cuffPicked&&!net.cuffPickerOpen){
     net.cuffPickerOpen=true;
