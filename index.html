@@ -127,7 +127,7 @@ h1 span{color:var(--leather)}
 <div class="ov" id="tossOv"><div class="card" role="dialog" aria-modal="true" aria-labelledby="tossT"><h2 id="tossT"></h2><div style="color:var(--muted);margin-bottom:16px" id="tossSub">Choose how to start the match.</div><div style="display:flex;gap:10px" id="tossBtns"><button class="go" id="cBat">Bat first</button><button class="go" id="cBowl">Bowl first</button></div></div></div>
 <div class="ov" id="ov"><div class="card" role="dialog" aria-modal="true" aria-labelledby="wt">
  <h2 id="wt"></h2><div id="ws" style="color:var(--muted)"></div>
- <table><thead><tr><th></th><th>Runs</th><th>Balls</th><th>Role</th></tr></thead><tbody id="tb"></tbody></table>
+ <table><thead><tr><th></th><th>Runs</th><th>Balls</th><th>Wkts</th><th>Role</th></tr></thead><tbody id="tb"></tbody></table>
  <button class="go" id="again">Play again</button>
 </div></div>
 
@@ -176,7 +176,8 @@ function hand(n,skin,cuff='#15191f'){
 function reset(){
   timers.forEach(clearTimeout);timers=[];
   const oldCuffs=S&&S.cuffs?S.cuffs:['#15191f','#15191f'];
-  S={inn:1,score:0,target:null,state:'idle',mode:'toss',first:0,tw:0,bk:0,pick:[null,null],balls:[0,0],runs:[0,0],log:[],intro:0,tossStarted:false,cuffs:oldCuffs,themeReady:[true,true],themePrompt:false};
+  const oldOvers=S&&S.maxOvers||1,oldWickets=S&&S.maxWickets||1;
+  S={inn:1,score:0,target:null,state:'idle',mode:'toss',first:0,tw:0,bk:0,pick:[null,null],balls:[0,0],runs:[0,0],wickets:[0,0],reviews:[1,1],maxOvers:oldOvers,maxWickets:oldWickets,reviewing:null,reviewId:0,pendingOut:null,log:[],intro:0,tossStarted:false,cuffs:oldCuffs,themeReady:[true,true],themePrompt:false};
   $('ov').classList.remove('show');$('tossOv').classList.remove('show');showTossIntro(0);clearImpacts();buildKeys();
   $('log').innerHTML='<p class="t">Play rock paper scissors to decide the toss. Picks stay hidden until the reveal.</p>';
   $('count').textContent='Ready';
@@ -186,18 +187,19 @@ function reset(){
 const bat=()=>S.inn===1?S.first:1-S.first, bowl=()=>1-bat();
 
 function render(){
-  const T=S.mode==='toss',b=bat();
+  const T=S.mode==='toss',RPS=T||S.mode==='review',b=bat();
   $('sInn').textContent=T?'Toss':S.inn;
   $('sBat').textContent=T?'Rock paper scissors':NAMES[b];
   $('sScore').textContent=T?'–':S.score;
-  $('sWk').textContent=1;
-  $('sTarget').textContent=T?'Winner picks bat or bowl':S.target==null?'Set a target':'Target '+S.target+' · need '+Math.max(S.target-S.score,0);
+  $('sWk').textContent=T?'–':Math.max(S.maxWickets-S.wickets[b],0);
+  const overText=`${Math.floor(S.balls[b]/6)}.${S.balls[b]%6}/${S.maxOvers} ov`;
+  $('sTarget').textContent=T?`${S.maxOvers} over${S.maxOvers>1?'s':''} · ${S.maxWickets} wicket${S.maxWickets>1?'s':''}`:S.target==null?`${overText} · ${Math.max(S.maxWickets-S.wickets[b],0)} wicket${S.maxWickets-S.wickets[b]===1?'':'s'} left`:'Target '+S.target+' · need '+Math.max(S.target-S.score,0)+' · '+overText;
   if(T){$('r0').innerHTML=`<em>${NAMES[0]}</em>`;$('r1').innerHTML=`<em>${NAMES[1]}</em>`}
   else{$('r'+b).innerHTML=`<em style="color:var(--brass)">${NAMES[b]} · Batter</em>`;
   $('r'+bowl()).innerHTML=`<em>${NAMES[bowl()]} · Bowler</em>`}
   const lab=T?'Start toss':S.balls[0]+S.balls[1]===0?'Bowl first ball':S.state==='break'?'Start innings 2':'Next ball';
   $('go').textContent=lab;
-  $('go').disabled=S.state==='pick'||S.state==='over'||S.state==='choose'||S.state==='intro';
+  $('go').disabled=S.state==='pick'||S.state==='over'||S.state==='choose'||S.state==='intro'||S.state==='reviewOffer';
   document.querySelectorAll('.keys button').forEach(x=>x.disabled=S.state!=='pick'||(ai&&x.dataset.p==='1'));
 }
 function showHands(a,b,anim,cls){
@@ -292,7 +294,8 @@ function startBall(){
   showHands(0,0,false);
   ['1','2','3'].forEach((t,i)=>timers.push(setTimeout(()=>{$('count').textContent=t;beep(380+i*120,.15)},i*1000)));
   const bar=$('bar');bar.classList.remove('run');void bar.offsetWidth;bar.classList.add('run');
-  if(ai)timers.push(setTimeout(()=>lock(1,Math.floor(Math.random()*(S.mode==='toss'?3:7))),300+Math.random()*2000));
+  const rps=S.mode==='toss'||S.mode==='review';
+  if(ai)timers.push(setTimeout(()=>lock(1,Math.floor(Math.random()*(rps?3:7))),300+Math.random()*2000));
   timers.push(setTimeout(reveal,online()?3400:3000));
   render();
 }
@@ -305,9 +308,10 @@ function lock(p,n){
 
 function reveal(){
   $('count').textContent='Reveal!';
-  const auto=[false,false],T=S.mode==='toss';
-  for(let p=0;p<2;p++)if(S.pick[p]==null){S.pick[p]=Math.floor(Math.random()*(T?3:7));auto[p]=true}
+  const auto=[false,false],T=S.mode==='toss',R=S.mode==='review';
+  for(let p=0;p<2;p++)if(S.pick[p]==null){S.pick[p]=Math.floor(Math.random()*((T||R)?3:7));auto[p]=true}
   if(T)return tossReveal(auto);
+  if(R)return reviewReveal(auto);
   const B=S.pick[bat()],W=S.pick[bowl()];
   showHands(S.pick[0],S.pick[1],true,'pop');
   $('n0').textContent=S.pick[0]+(auto[0]?' (auto)':'');
@@ -320,26 +324,77 @@ function reveal(){
   else if(B===0){runs=W;msg=say(STEAL,o)}
   else{runs=B;msg=say(RUN[B],o)}
   if(runs>=4)cls='b';
-  if(out){showImpact(bowl(),'OUT!','out');timers.push(setTimeout(()=>animateHand(bowl(),'out-pop'),100))}
-  else{showImpact(bat(),'+'+runs,'run');timers.push(setTimeout(()=>animateHand(bat(),'score-pop'),100))}
+  if(out){
+    S.pendingOut={B,W,msg:say(B===0?DF:OUT,o),cls:'o'};S.reviewing=bat();S.state='reviewOffer';S.reviewId++;
+    render();maybePromptReview();return;
+  }
+  showImpact(bat(),'+'+runs,'run');timers.push(setTimeout(()=>animateHand(bat(),'score-pop'),100));
   S.score+=runs;S.runs[bat()]=S.score;S.balls[bat()]++;
   const n=S.balls[bat()];
   const log=document.createElement('p');log.className=cls;
   log.textContent=`Inn ${S.inn} · ball ${n} · ${B} v ${W}: ${msg} (${S.score})`;
   if(S.log.length===0)$('log').innerHTML='';
   S.log.push(1);$('log').prepend(log);
-  flash(out?'out':runs>=4?'big':'');
-  beep(out?140:runs>=4?740:440,out?.5:.2,out?'sawtooth':'triangle');
+  flash(runs>=4?'big':'');
+  beep(runs>=4?740:440,.2,'triangle');
   render();
-
-  const chased=S.inn===2&&S.score>S.target;
-  if(out||chased){
-    S.state='over';render();
-    timers.push(setTimeout(()=>endInnings(),1800));
-  }else{
-    S.state='idle';render();
-    timers.push(setTimeout(()=>{if(S.state==='idle')startBall()},2200));
+  finishBall();
+}
+function finishBall(){
+  const b=bat(),chased=S.inn===2&&S.score>S.target,allOut=S.wickets[b]>=S.maxWickets,oversDone=S.balls[b]>=S.maxOvers*6;
+  if(chased||allOut||oversDone){S.state='over';render();timers.push(setTimeout(()=>endInnings(),1800))}
+  else{S.state='idle';render();timers.push(setTimeout(()=>{if(S.state==='idle')startBall()},2200))}
+}
+function appendBallLog(msg,cls='t'){
+  const p=document.createElement('p');p.className=cls;
+  p.textContent=`Inn ${S.inn} · ball ${S.balls[bat()]} · ${msg} (${S.score})`;
+  if(S.log.length===0)$('log').innerHTML='';S.log.push(1);$('log').prepend(p);
+}
+function finalizeOut(){
+  const b=bat(),p=S.pendingOut;if(!p)return;
+  S.mode='game';S.pendingOut=null;S.reviewing=null;buildKeys();S.balls[b]++;S.wickets[b]++;
+  showImpact(bowl(),'OUT!','out');timers.push(setTimeout(()=>animateHand(bowl(),'out-pop'),100));
+  appendBallLog(p.msg,'o');flash('out');beep(140,.5,'sawtooth');render();finishBall();
+}
+function surviveReview(){
+  const b=bat();S.mode='game';S.pendingOut=null;S.reviewing=null;buildKeys();S.balls[b]++;
+  showImpact(b,'SAVED!','run');timers.push(setTimeout(()=>animateHand(b,'score-pop'),100));
+  appendBallLog(`${NAMES[b]} wins the review — not out.`,'b');beep(680,.25,'triangle');render();finishBall();
+}
+function maybePromptReview(){
+  if(S.state!=='reviewOffer'||net.seenReview===S.reviewId)return;
+  const b=S.reviewing;net.seenReview=S.reviewId;
+  if(ai&&b===1){timers.push(setTimeout(()=>handleReview(Math.random()<.7?'use':'decline'),900));return}
+  if(!online()||me()===b){
+    const left=S.reviews[b];
+    modal('Out? Review it?',left?`You have <b>1 review</b>. Win rock-paper-scissors to stay in.`:'No reviews remaining.',[
+      ...(left?[['Use review',()=>{unmodal();answerReview('use')}]]:[]),
+      ['Accept out',()=>{unmodal();answerReview('decline')},true]
+    ]);
   }
+}
+function answerReview(decision){if(net.role==='guest')send({t:'review',decision});else handleReview(decision)}
+function handleReview(decision){
+  if(S.state!=='reviewOffer')return;
+  if(decision!=='use'||S.reviews[S.reviewing]<1){finalizeOut();return}
+  S.reviews[S.reviewing]=0;beginReviewRPS();
+}
+function beginReviewRPS(){
+  S.mode='review';S.state='pick';S.pick=[null,null];S.bk++;clearSel();buildKeys();
+  $('count').textContent='Review';$('l0').textContent=$('l1').textContent='Review: choose';$('l0').className=$('l1').className='lock';
+  $('n0').textContent=$('n1').textContent='';showHands(0,0,false);
+  const bar=$('bar');bar.classList.remove('run');void bar.offsetWidth;bar.classList.add('run');
+  if(ai)timers.push(setTimeout(()=>lock(1,Math.floor(Math.random()*3)),400+Math.random()*1500));
+  timers.push(setTimeout(reveal,online()?3400:3000));render();
+}
+function reviewReveal(auto){
+  const H=[0,5,2],NM=['Rock','Paper','Scissors'],a=S.pick[0],b=S.pick[1],d=(a-b+3)%3;
+  showHands(H[a],H[b],true,'pop');$('n0').textContent=NM[a]+(auto[0]?' (auto)':'');$('n1').textContent=NM[b]+(auto[1]?' (auto)':'');
+  const note=(text,cls)=>{const p=document.createElement('p');p.className=cls;p.textContent=text;$('log').prepend(p)};
+  if(d===0){note('Review tied — play rock-paper-scissors again.','t');S.state='idle';render();timers.push(setTimeout(beginReviewRPS,1500));return}
+  const winner=d===1?0:1;
+  note(`${NAMES[winner]} wins the review toss.`,winner===S.reviewing?'b':'o');
+  if(winner===S.reviewing)surviveReview();else finalizeOut();
 }
 function flash(c){if(!c)return;const f=$('flash');f.className='flash';void f.offsetWidth;f.className='flash '+c}
 
@@ -393,9 +448,9 @@ function endInnings(){
     let t,s;const w=r0>r1?0:1,d=Math.abs(r0-r1);
     if(r0===r1){t='It’s a tie!';s='Both sides scored '+r0+'.'}
     else if(w!==S.first){t=NAMES[w]+' wins!';s=`Chased down ${S.target} in ${S.balls[w]} balls.`}
-    else{t=NAMES[w]+' wins!';s=`${NAMES[1-w]} was out, ${d} run${d>1?'s':''} behind.`}
+    else{t=NAMES[w]+' wins!';s=`${NAMES[1-w]} finished ${d} run${d>1?'s':''} behind.`}
     $('wt').textContent=t;$('ws').textContent=s;
-    $('tb').innerHTML=[0,1].map(i=>`<tr><td>${NAMES[i]}</td><td>${S.runs[i]}</td><td>${S.balls[i]}</td><td>${i===S.first?'Batted first':'Chased'}</td></tr>`).join('');
+    $('tb').innerHTML=[0,1].map(i=>`<tr><td>${NAMES[i]}</td><td>${S.runs[i]}</td><td>${S.balls[i]}</td><td>${S.wickets[i]}/${S.maxWickets}</td><td>${i===S.first?'Batted first':'Chased'}</td></tr>`).join('');
     $('ov').classList.add('show');
     beep(520,.3);setTimeout(()=>beep(660,.3),180);setTimeout(()=>beep(880,.4),360);
     $('again').focus();
@@ -404,7 +459,7 @@ function endInnings(){
 
 // controls
 function buildKeys(){
-  const T=S.mode==='toss',L=['Rock','Paper','Scissors'],E=['✊','✋','✌️'];
+  const T=S.mode==='toss'||S.mode==='review',L=['Rock','Paper','Scissors'],E=['✊','✋','✌️'];
   [0,1].forEach(p=>{
     const k=$('k'+p);k.innerHTML='';k.className='keys'+(T?' t3':'');
     for(let i=0;i<(T?3:7);i++){
@@ -436,7 +491,7 @@ addEventListener('keydown',e=>{
     if(S.state==='idle'||S.state==='break'){e.preventDefault();act()}
     return;
   }
-  let m;const T=S.mode==='toss',sh=T?-1:0,ok=v=>!T||(v>0&&v<4);
+  let m;const T=S.mode==='toss'||S.mode==='review',sh=T?-1:0,ok=v=>!T||(v>0&&v<4);
   if(m=e.code.match(/^Digit([0-6])$/)){e.preventDefault();if(ok(+m[1]))press(0,+m[1]+sh);return}
   if(m=e.code.match(/^Numpad([0-6])$/)){e.preventDefault();if(!ai&&ok(+m[1]))press(1,+m[1]+sh);return}
   if(m=e.code.match(/^Key([A-Z])$/)){const i=P2L.indexOf(m[1]);if(i>=0&&i<(T?3:7)&&!ai)press(1,i)}
@@ -454,7 +509,7 @@ const firebaseConfig={
 };
 const fbApp=firebase.initializeApp(firebaseConfig),fbAuth=firebase.auth(),fbDb=firebase.database();
 let authPromise=null;
-const net={role:'local',code:'',room:null,gname:null,guestConnected:false,wait:false,last:'',lastAction:'',cuffPicked:false,cuffPickerOpen:false};
+const net={role:'local',code:'',room:null,gname:null,guestConnected:false,wait:false,last:'',lastAction:'',cuffPicked:false,cuffPickerOpen:false,seenReview:-1};
 const online=()=>net.role==='host'||net.role==='guest',me=()=>net.role==='guest'?1:0;
 const home=()=>location.replace(location.pathname+location.search);
 function ensureAuth(){
@@ -480,6 +535,10 @@ function setName(i,v){NAMES[i]=v;$('nm'+i).textContent=v;render()}
 function askName(i,cb){
   const title=online()?'Your player name':`Player ${i+1}, choose your name`;
   modal(title,`<div style="color:var(--muted);font-size:14px">This name will appear for both players after you continue.</div><input id="mi" maxlength="14" placeholder="Player ${i+1}" autocomplete="name">`,[['Continue',()=>{setName(i,$('mi').value.trim().slice(0,14)||'Player '+(i+1));unmodal();cb()}]]);
+}
+function askMatchSetup(cb){
+  const options=n=>[1,2,3].map(v=>`<option value="${v}" ${v===n?'selected':''}>${v}</option>`).join('');
+  modal('Match setup',`<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;text-align:left"><label>Overs<select id="setOvers" style="width:100%;margin-top:5px;padding:10px;border-radius:9px;background:var(--night);color:var(--bone);border:1px solid var(--line)">${options(S.maxOvers)}</select></label><label>Wickets<select id="setWickets" style="width:100%;margin-top:5px;padding:10px;border-radius:9px;background:var(--night);color:var(--bone);border:1px solid var(--line)">${options(S.maxWickets)}</select></label></div><div style="font-size:12px;color:var(--muted);margin-top:12px">Each batter also has one review.</div>`,[['Continue',()=>{S.maxOvers=+$('setOvers').value;S.maxWickets=+$('setWickets').value;unmodal();cb()}]]);
 }
 function applyRole(){
   const solo=net.role==='solo';
@@ -512,8 +571,8 @@ function tossView(show,title){
 }
 function menu(){
   modal('Hand Cricket','Two players, one fist at a time. How do you want to play?',[
-    ['Play vs AI',()=>{unmodal();ai=true;net.role='solo';applyRole();askName(0,()=>{setName(1,'AI');beginCuffSetup()})}],
-    ['Create an online room',()=>{unmodal();ai=false;askName(0,host)}],
+    ['Play vs AI',()=>{unmodal();ai=true;net.role='solo';applyRole();askName(0,()=>askMatchSetup(()=>{setName(1,'AI');beginCuffSetup()}))}],
+    ['Create an online room',()=>{unmodal();ai=false;askName(0,()=>askMatchSetup(host))}],
     ['Join with a room code',joinUI,1]]);
 }
 function joinUI(){
@@ -537,6 +596,7 @@ function receiveGuestAction(m){
   else if(m.t==='name'){net.gname=m.name;setName(1,m.name);unmodal();beginCuffSetup()}
   else if(m.t==='theme'){S.cuffs[1]=m.color;S.themeReady[1]=true;showHands(0,0,false);completeCuffSetup()}
   else if(m.t==='pick')lock(1,m.n);
+  else if(m.t==='review')handleReview(m.decision);
   else if(m.t==='go')act();
   else if(m.t==='choose'&&S.tw===1)choose(m.c);
   else if(m.t==='again')again();
@@ -575,7 +635,7 @@ async function join(code){
 function snap(){
   const g=id=>$(id).innerHTML;
   const fx=p=>({text:$('fx'+p).textContent,cls:$('fx'+p).className});
-  return {S:{inn:S.inn,score:S.score,target:S.target,state:S.state,mode:S.mode,first:S.first,tw:S.tw,balls:S.balls,runs:S.runs,bk:S.bk,intro:S.intro,tossStarted:S.tossStarted,cuffs:S.cuffs,themeReady:S.themeReady,themePrompt:S.themePrompt},names:NAMES,guestReady:!!net.gname,count:$('count').textContent,h0:g('h0'),h1:g('h1'),n0:$('n0').textContent,n1:$('n1').textContent,fx:[fx(0),fx(1)],log:g('log'),tossShow:$('tossOv').classList.contains('show'),ovShow:$('ov').classList.contains('show'),wt:$('wt').textContent,ws:$('ws').textContent,tb:g('tb')};
+  return {S:{inn:S.inn,score:S.score,target:S.target,state:S.state,mode:S.mode,first:S.first,tw:S.tw,balls:S.balls,runs:S.runs,wickets:S.wickets,reviews:S.reviews,maxOvers:S.maxOvers,maxWickets:S.maxWickets,reviewing:S.reviewing,reviewId:S.reviewId,pendingOut:S.pendingOut,bk:S.bk,intro:S.intro,tossStarted:S.tossStarted,cuffs:S.cuffs,themeReady:S.themeReady,themePrompt:S.themePrompt},names:NAMES,guestReady:!!net.gname,count:$('count').textContent,h0:g('h0'),h1:g('h1'),n0:$('n0').textContent,n1:$('n1').textContent,fx:[fx(0),fx(1)],log:g('log'),tossShow:$('tossOv').classList.contains('show'),ovShow:$('ov').classList.contains('show'),wt:$('wt').textContent,ws:$('ws').textContent,tb:g('tb')};
 }
 setInterval(()=>{
   if(net.role!=='host'||!net.room)return;
@@ -599,6 +659,7 @@ function apply(d){
   render();
   showTossIntro(d.S.intro||0);
   if(net.wait&&d.guestReady){net.wait=false;unmodal()}
+  maybePromptReview();
   if(S.themePrompt&&net.role==='guest'&&!net.cuffPicked&&!net.cuffPickerOpen){
     net.cuffPickerOpen=true;
     openCuffPicker(1,color=>{
