@@ -143,6 +143,8 @@ h1 span{color:var(--leather)}
 
 <div class="ov" id="matchOv"><div class="card winner-card" role="status" aria-live="assertive"><h2 id="matchTitle"></h2><p id="matchDetail"></p></div></div>
 
+<div class="ov" id="lobbyOv"><div class="card" role="dialog" aria-modal="true"><h2>Team lobby</h2><div id="lobbyBody" style="color:var(--muted);margin-bottom:16px"></div><div id="lobbyButtons" style="display:grid;gap:8px"></div></div></div>
+
 <div class="ov" id="introOv"><div class="card intro-card" role="status" aria-live="assertive"><h2>Toss starting</h2><div style="color:var(--muted)">Get your hand ready</div><div class="intro-n" id="introN">3</div></div></div>
 
 <div class="ov" id="cuffOv"><div class="card" role="dialog" aria-modal="true" aria-labelledby="cuffT"><h2 id="cuffT">Choose your cuff</h2><div style="color:var(--muted)">Visual only — pick a color or keep black.</div><div class="cuff-preview" id="cuffPreview"></div><div class="cuff-name" id="cuffName"></div><div class="cuff-nav"><button class="go sec" id="cuffPrev">Previous</button><button class="go sec" id="cuffNext">Next</button></div><div id="cuffUse" style="margin-top:8px"></div><button class="cuff-skip" id="cuffSkip">Skip — keep black</button></div></div>
@@ -189,7 +191,7 @@ function reset(){
   timers.forEach(clearTimeout);timers=[];
   const oldCuffs=S&&S.cuffs?S.cuffs:['#15191f','#15191f'];
   const oldOvers=S&&S.maxOvers||1,oldWickets=S&&S.maxWickets||1;
-  S={inn:1,score:0,target:null,state:'idle',mode:'toss',first:0,tw:0,bk:0,pick:[null,null],balls:[0,0],runs:[0,0],wickets:[0,0],reviews:[1,1],maxOvers:oldOvers,maxWickets:oldWickets,reviewing:null,reviewId:0,pendingOut:null,reviewDeadline:0,noticeId:0,noticeTitle:'',noticeDetail:'',noticeUntil:0,resultPhase:0,resultTitle:'',resultDetail:'',log:[],intro:0,tossStarted:false,cuffs:oldCuffs,themeReady:[true,true],themePrompt:false};
+  S={inn:1,score:0,target:null,state:'idle',mode:'toss',first:0,tw:0,bk:0,pick:[null,null],balls:[0,0],runs:[0,0],wickets:[0,0],reviews:[1,1],maxOvers:oldOvers,maxWickets:oldWickets,reviewing:null,reviewId:0,pendingOut:null,reviewDeadline:0,noticeId:0,noticeTitle:'',noticeDetail:'',noticeUntil:0,resultPhase:0,resultTitle:'',resultDetail:'',players:null,activeBat:null,activeBowl:null,log:[],intro:0,tossStarted:false,cuffs:oldCuffs,themeReady:[true,true],themePrompt:false};
   $('ov').classList.remove('show');$('winOv').classList.remove('show');$('matchOv').classList.remove('show');$('tossOv').classList.remove('show');showTossIntro(0);clearImpacts();buildKeys();
   $('log').innerHTML='<p class="t">Play rock paper scissors to decide the toss. Picks stay hidden until the reveal.</p>';
   $('count').textContent='Ready';
@@ -197,11 +199,20 @@ function reset(){
   $('n0').textContent=$('n1').textContent='';
 }
 const bat=()=>S.inn===1?S.first:1-S.first, bowl=()=>1-bat();
+const teamMode=()=>online()&&Array.isArray(S.players);
+const teamPlayers=t=>teamMode()?S.players.filter(p=>p.team===t):[];
+const localPlayer=()=>teamMode()?S.players.find(p=>p.id===net.uid):null;
+const localTeam=()=>teamMode()?(localPlayer()?.team??-1):me();
+const activeIdFor=t=>t===bat()?S.activeBat:S.activeBowl;
+const playerLabel=t=>{const p=teamMode()?S.players.find(x=>x.id===activeIdFor(t)):null;return p?p.name:NAMES[t]};
+const canControlSide=t=>!teamMode()||activeIdFor(t)===net.uid;
+const captainFor=t=>teamPlayers(t)[0];
+const canChooseToss=()=>!teamMode()?(!online()||me()===S.tw):captainFor(S.tw)?.id===net.uid;
 
 function render(){
   const T=S.mode==='toss',b=bat(),wk=S.wickets[b],left=Math.max(S.maxWickets-wk,0);
   $('sInn').textContent=T?'Toss':'#'+S.inn;
-  $('sBat').textContent=T?'Rock paper scissors':NAMES[b];
+  $('sBat').textContent=T?'Rock paper scissors':playerLabel(b);
   $('sScore').textContent=T?'–':S.score;
   $('sOvers').textContent=T?'–':`${Math.floor(S.balls[b]/6)}.${S.balls[b]%6}/${S.maxOvers}`;
   $('sWk').textContent=T?'–':`${wk}/${S.maxWickets}`;
@@ -209,13 +220,14 @@ function render(){
   const overText=`${Math.floor(S.balls[b]/6)}.${S.balls[b]%6}/${S.maxOvers} ov`;
   $('sNeedL').textContent=T?'Match format':S.target==null?'Wickets left':'To win';
   $('sTarget').textContent=T?`${S.maxOvers} ov · ${S.maxWickets} wkts`:S.target==null?`${left} left`:`${Math.max(S.target-S.score,0)} runs`;
-  if(T){$('r0').innerHTML=`<em>${NAMES[0]}</em>`;$('r1').innerHTML=`<em>${NAMES[1]}</em>`}
-  else{$('r'+b).innerHTML=`<em style="color:var(--brass)">${NAMES[b]} · Batter</em>`;
-  $('r'+bowl()).innerHTML=`<em>${NAMES[bowl()]} · Bowler</em>`}
-  const lab=T?'Start toss':S.balls[0]+S.balls[1]===0?'Bowl first ball':S.state==='break'?'Start innings 2':'Next ball';
+  if(T){$('r0').innerHTML=`<em>${teamMode()?playerLabel(0):NAMES[0]}</em>`;$('r1').innerHTML=`<em>${teamMode()?playerLabel(1):NAMES[1]}</em>`}
+  else{$('r'+b).innerHTML=`<em style="color:var(--brass)">${playerLabel(b)} · Batter</em>`;
+  $('r'+bowl()).innerHTML=`<em>${playerLabel(bowl())} · Bowler</em>`}
+  const lab=S.mode==='lobby'?'Start match':T?'Start toss':S.balls[0]+S.balls[1]===0?'Bowl first ball':S.state==='break'?'Start innings 2':'Next ball';
   $('go').textContent=lab;
-  $('go').disabled=S.state==='pick'||S.state==='over'||S.state==='choose'||S.state==='intro'||S.state==='reviewOffer'||Date.now()<S.noticeUntil;
-  document.querySelectorAll('.keys button').forEach(x=>x.disabled=S.state!=='pick'||(ai&&x.dataset.p==='1'));
+  const lobbyReady=S.mode==='lobby'&&teamPlayers(0).length>0&&teamPlayers(1).length>0;
+  $('go').disabled=(S.mode==='lobby'?!lobbyReady||net.role!=='host':S.state==='pick'||S.state==='over'||S.state==='choose'||S.state==='intro'||S.state==='reviewOffer'||Date.now()<S.noticeUntil||!canControlSide(bowl()));
+  document.querySelectorAll('.keys button').forEach(x=>x.disabled=S.state!=='pick'||(ai&&x.dataset.p==='1')||!canControlSide(+x.dataset.p));
 }
 function showHands(a,b,anim,cls){
   const cuffs=S&&S.cuffs?S.cuffs:['#15191f','#15191f'];
@@ -333,7 +345,7 @@ function reveal(){
   $('n1').textContent=S.pick[1]+(auto[1]?' (auto)':'');
   $('l0').textContent=$('l1').textContent='Waiting';$('l0').className=$('l1').className='lock';
 
-  const o={b:NAMES[bat()],w:NAMES[bowl()],B,W};
+  const o={b:playerLabel(bat()),w:playerLabel(bowl()),B,W};
   let out=false,runs=0,msg,cls='';
   if(B===W){out=true;msg=say(B===0?DF:OUT,o);cls='o'}
   else if(B===0){runs=W;msg=say(STEAL,o)}
@@ -361,7 +373,12 @@ function reveal(){
 function finishBall(){
   const b=bat(),chased=S.inn===2&&S.score>S.target,allOut=S.wickets[b]>=S.maxWickets,oversDone=S.balls[b]>=S.maxOvers*6;
   if(chased||allOut||oversDone){S.state='over';render();timers.push(setTimeout(()=>endInnings(),1800))}
-  else{S.state='idle';render();timers.push(setTimeout(()=>{if(S.state==='idle')startBall()},2200))}
+  else{
+    if(teamMode()&&S.balls[b]>0&&S.balls[b]%6===0){
+      const bowlers=teamPlayers(bowl());if(bowlers.length>1){const i=bowlers.findIndex(p=>p.id===S.activeBowl);S.activeBowl=bowlers[(i+1)%bowlers.length].id;announce(`${playerLabel(bowl())} to bowl the next over`,`${playerLabel(bat())} stays on strike.`,1800)}
+    }
+    S.state='idle';render();timers.push(setTimeout(()=>{if(S.state==='idle'&&Date.now()>=S.noticeUntil)startBall()},2200))
+  }
 }
 function appendBallLog(msg,cls='t'){
   const p=document.createElement('p');p.className=cls;
@@ -371,19 +388,20 @@ function appendBallLog(msg,cls='t'){
 function finalizeOut(){
   const b=bat(),p=S.pendingOut;if(!p)return;
   S.mode='game';S.pendingOut=null;S.reviewing=null;S.reviewDeadline=0;buildKeys();S.balls[b]++;S.wickets[b]++;
+  if(teamMode()){const batters=teamPlayers(b);if(batters.length>1){const i=batters.findIndex(x=>x.id===S.activeBat);S.activeBat=batters[(i+1)%batters.length].id}}
   showImpact(bowl(),'OUT!','out');timers.push(setTimeout(()=>animateHand(bowl(),'out-pop'),100));
   appendBallLog(p.msg,'o');flash('out');beep(140,.5,'sawtooth');render();finishBall();
 }
 function surviveReview(){
   const b=bat();S.mode='game';S.pendingOut=null;S.reviewing=null;S.reviewDeadline=0;buildKeys();S.balls[b]++;
   showImpact(b,'SAVED!','run');timers.push(setTimeout(()=>animateHand(b,'score-pop'),100));
-  appendBallLog(`${NAMES[b]} wins the review — not out.`,'b');beep(680,.25,'triangle');render();finishBall();
+  appendBallLog(`${playerLabel(b)} wins the review — not out.`,'b');beep(680,.25,'triangle');render();finishBall();
 }
 function maybePromptReview(){
   if(S.state!=='reviewOffer'||net.seenReview===S.reviewId)return;
   const b=S.reviewing;net.seenReview=S.reviewId;
   if(ai&&b===1){timers.push(setTimeout(()=>handleReview(Math.random()<.7?'use':'decline'),900));return}
-  if(!online()||me()===b){
+  if(!online()||canControlSide(b)){
     const left=S.reviews[b];
     const seconds=()=>Math.max(0,Math.ceil((S.reviewDeadline-Date.now())/1000));
     modal('You are out — take a review?',left?`You have <b>${left} review</b>. Win rock-paper-scissors to remain not out.<div class="review-clock">Decide in <b id="reviewClock">${seconds()}</b>s</div>`:'No reviews remaining.',[
@@ -398,7 +416,7 @@ function maybePromptReview(){
     };tick();
   }
 }
-function answerReview(decision){if(net.role==='guest')send({t:'review',decision});else handleReview(decision)}
+function answerReview(decision){if(net.role==='guest'||net.role==='player')send({t:'review',decision});else handleReview(decision)}
 function handleReview(decision){
   if(S.state!=='reviewOffer')return;
   if(Date.now()>=S.reviewDeadline||decision!=='use'||S.reviews[S.reviewing]<1){finalizeOut();return}
@@ -418,7 +436,7 @@ function reviewReveal(auto){
   const note=(text,cls)=>{const p=document.createElement('p');p.className=cls;p.textContent=text;$('log').prepend(p)};
   if(d===0){note('Review tied — play rock-paper-scissors again.','t');S.state='idle';render();timers.push(setTimeout(beginReviewRPS,1500));return}
   const winner=d===1?0:1;
-  note(`${NAMES[winner]} wins the review toss.`,winner===S.reviewing?'b':'o');
+  note(`${playerLabel(winner)} wins the review toss.`,winner===S.reviewing?'b':'o');
   if(winner===S.reviewing)surviveReview();else finalizeOut();
 }
 function flash(c){if(!c)return;const f=$('flash');f.className='flash';void f.offsetWidth;f.className='flash '+c}
@@ -439,24 +457,26 @@ function tossReveal(auto){
     return;
   }
   const w=d===1?0:1;S.tw=w;
-  p.className='b';p.textContent=`Toss: ${NM[w===0?a:b]} beats ${NM[w===0?b:a]}. ${NAMES[w]} wins the toss.`;
+  p.className='b';p.textContent=`Toss: ${NM[w===0?a:b]} beats ${NM[w===0?b:a]}. ${teamMode()?captainFor(w).name:NAMES[w]} wins the toss.`;
   $('log').prepend(p);
   S.state='choose';render();
   timers.push(setTimeout(()=>{
-    tossView(true,NAMES[w]+' won the toss');
+    tossView(true,(teamMode()?captainFor(w).name:NAMES[w])+' won the toss');
     if(ai&&w===1)setTimeout(()=>choose(Math.random()<.5?'bat':'bowl'),1200);
-    else if(!online()||me()===w)$('cBat').focus();
+    else if(!online()||canChooseToss())$('cBat').focus();
   },1500));
 }
 function choose(c){
   if(S.state!=='choose')return;
   $('tossOv').classList.remove('show');
   S.first=c==='bat'?S.tw:1-S.tw;S.mode='game';S.state='idle';
+  if(teamMode()){S.activeBat=captainFor(S.first).id;S.activeBowl=captainFor(1-S.first).id}
   const p=document.createElement('p');p.className='t';
-  p.textContent=`${NAMES[S.tw]} chose to ${c}. ${NAMES[S.first]} bats first.`;
+  const chooser=teamMode()?captainFor(S.tw).name:NAMES[S.tw];
+  p.textContent=`${chooser} chose to ${c}. ${teamMode()?NAMES[S.first]:NAMES[S.first]} bats first.`;
   $('log').prepend(p);
   $('count').textContent='Ready';$('n0').textContent=$('n1').textContent='';
-  showHands(0,0,false);buildKeys();announce(`${NAMES[S.tw]} chose to ${c}`,`${NAMES[S.first]} will bat first.`,2000);render();
+  showHands(0,0,false);buildKeys();announce(`${chooser} chose to ${c}`,`${NAMES[S.first]} will bat first.`,2000);render();
 }
 function endInnings(){
   if(S.inn===1){
@@ -466,6 +486,7 @@ function endInnings(){
     p.textContent=`Innings break. ${NAMES[bat()]} needs ${S.target} to win.`;
     $('log').prepend(p);
     $('n0').textContent=$('n1').textContent='';
+    if(teamMode()){S.activeBat=captainFor(bat()).id;S.activeBowl=captainFor(bowl()).id}
     showHands(0,0,false);announce(`${NAMES[bat()]} needs ${S.target} runs to win`,`${NAMES[bat()]} is chasing ${S.target} against ${NAMES[bowl()]}.`,3000);render();
   }else{
     S.state='over';
@@ -518,7 +539,7 @@ function buildKeys(){
   $('hint0').textContent=T?'Keys: 1 rock, 2 paper, 3 scissors':'Keys: 0–6 on the number row';
   $('hint1').textContent=T?'Keys: numpad 1–3, or A rock, S paper, D scissors':'Keys: numpad 0–6, or A S D F G H J';
 }
-const pickFirst=c=>net.role==='guest'?send({t:'choose',c}):choose(c);
+const pickFirst=c=>online()&&!canChooseToss()?send({t:'choose',c}):choose(c);
 $('cBat').addEventListener('click',()=>pickFirst('bat'));
 $('cBowl').addEventListener('click',()=>pickFirst('bowl'));
 $('go').addEventListener('click',act);
@@ -555,8 +576,8 @@ const firebaseConfig={
 };
 const fbApp=firebase.initializeApp(firebaseConfig),fbAuth=firebase.auth(),fbDb=firebase.database();
 let authPromise=null;
-const net={role:'local',code:'',room:null,gname:null,guestConnected:false,wait:false,last:'',lastAction:'',cuffPicked:false,cuffPickerOpen:false,seenReview:-1};
-const online=()=>net.role==='host'||net.role==='guest',me=()=>net.role==='guest'?1:0;
+const net={role:'local',code:'',room:null,uid:'',wait:false,last:'',lastAction:'',seenReview:-1};
+const online=()=>net.role==='host'||net.role==='guest'||net.role==='player',me=()=>net.role==='guest'?1:0;
 const home=()=>location.replace(location.pathname+location.search);
 function ensureAuth(){
   if(fbAuth.currentUser)return Promise.resolve(fbAuth.currentUser);
@@ -564,9 +585,10 @@ function ensureAuth(){
   return authPromise;
 }
 function send(m){
-  if(net.role!=='guest'||!net.room)return;
+  if((net.role!=='guest'&&net.role!=='player')||!net.room)return;
   const id=Date.now().toString(36)+Math.random().toString(36).slice(2,7);
-  net.room.child('guestAction').set({...m,id}).catch(fail);
+  const ref=net.role==='player'||teamMode()?net.room.child('actions').push():net.room.child('guestAction');
+  ref.set({...m,id,uid:net.uid}).catch(fail);
 }
 function modal(t,body,btns){
   $('mt').textContent=t;$('mb').innerHTML=body;
@@ -589,6 +611,9 @@ function askMatchSetup(cb,roomMatch=false){
 }
 function applyRole(){
   const solo=net.role==='solo';
+  if(teamMode()){
+    const t=localTeam();$('pad0').style.display=t===0?'':'none';$('pad1').style.display=t===1?'':'none';$('pad0').style.order=t===0?4:'';return;
+  }
   $('pad0').style.display=net.role==='guest'?'none':'';
   $('pad1').style.display=(net.role==='host'||solo)?'none':'';
   $('pad0').style.order=net.role==='host'?4:'';
@@ -598,20 +623,22 @@ function clearSel(){document.querySelectorAll('.keys button.sel').forEach(b=>b.c
 function press(p,n){
   if(S.state!=='pick')return;
   if(!online())return lock(p,n);
-  p=me();
+  p=localTeam();if(p<0||!canControlSide(p))return;
   // The selection class is never synchronised: only this player sees it.
   document.querySelectorAll('#k'+p+' button').forEach((b,i)=>b.classList.toggle('sel',i===n));
   const l=$('l'+p);l.textContent='Locked in';l.className='lock on';
-  if(p===1)send({t:'pick',n});else lock(0,n);
+  if(p===1||net.role==='player')send({t:'pick',n,team:p});else lock(0,n);
 }
 function act(){
   if(Date.now()<S.noticeUntil)return;
-  if(net.role==='guest'){send({t:'go'});return}
+  if(S.mode==='lobby'){if(net.role==='host')startTeamMatch();return}
+  if(teamMode()&&!canControlSide(bowl()))return;
+  if(net.role==='guest'||net.role==='player'){send({t:'go'});return}
   if(S.state==='idle'||S.state==='break'){timers.forEach(clearTimeout);timers=[];startBall()}
 }
-function again(){if(net.role==='guest'){send({t:'again'});return}reset();beginToss()}
+function again(){if(net.role==='guest'||net.role==='player'){send({t:'again'});return}reset();beginToss()}
 function tossView(show,title){
-  const mine=!online()||me()===S.tw;
+  const mine=canChooseToss();
   $('tossT').textContent=title;
   $('tossSub').textContent=mine?'Choose how to start the match.':'Waiting for '+NAMES[S.tw]+' to choose…';
   $('tossBtns').style.display=mine?'flex':'none';
@@ -632,6 +659,21 @@ function showWait(){
   const status=net.guestConnected?'Player 2 is choosing a name…':'Waiting for Player 2 to join…';
   modal('Invite Player 2',`Share this code or link.<code>${net.code}</code><div style="font-size:12px;word-break:break-all">${link}</div><p>${status}</p>`,[['Copy link',e=>{try{navigator.clipboard.writeText(link);e.target.textContent='Copied'}catch(x){}}]]);
 }
+function showLobby(){
+  if(!teamMode()||S.mode!=='lobby'){ $('lobbyOv').classList.remove('show');return; }
+  const team=t=>teamPlayers(t).map((p,i)=>`<div style="padding:7px;border-top:1px solid var(--line);color:${t?'var(--p2)':'var(--p1)'}">${i===0?'★ Captain · ':''}${p.name}</div>`).join('')||'<div style="padding:7px">Open slot</div>';
+  $('lobbyBody').innerHTML=`<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;text-align:left"><div><b style="color:var(--p1)">Team Blue</b>${team(0)}</div><div><b style="color:var(--p2)">Team Orange</b>${team(1)}</div></div><p style="font-size:12px">Need at least one player on each team. Maximum two players per team.</p>`;
+  const bx=$('lobbyButtons');bx.innerHTML='';const mine=localPlayer();
+  const add=(label,fn,sec)=>{const b=document.createElement('button');b.className='go'+(sec?' sec':'');b.textContent=label;b.onclick=fn;bx.appendChild(b)};
+  if(mine&&mine.team==null){if(teamPlayers(0).length<2)add('Join Team Blue',()=>send({t:'team',team:0}));if(teamPlayers(1).length<2)add('Join Team Orange',()=>send({t:'team',team:1}));}
+  if(net.role==='host'){const ready=teamPlayers(0).length&&teamPlayers(1).length;add(ready?'Start team match':'Waiting for both teams',startTeamMatch,!ready);}
+  $('lobbyOv').classList.add('show');
+}
+function startTeamMatch(){
+  if(net.role!=='host'||S.mode!=='lobby'||!teamPlayers(0).length||!teamPlayers(1).length)return;
+  S.activeBat=captainFor(0).id;S.activeBowl=captainFor(1).id;S.mode='toss';S.state='idle';
+  $('lobbyOv').classList.remove('show');buildKeys();render();beginToss();
+}
 const fail=e=>{
   const msg=typeof e==='string'?e:(e&&e.message?e.message:'Could not connect to the game room.');
   modal('Online room problem',msg,[['Back to menu',home]]);
@@ -640,6 +682,16 @@ function roomCode(){const c='ABCDEFGHJKLMNPQRSTUVWXYZ23456789';let s='';for(let 
 function receiveGuestAction(m){
   if(!m||!m.id||m.id===net.lastAction)return;
   net.lastAction=m.id;
+  if(teamMode()){
+    if(m.t==='join'&&S.mode==='lobby'&&m.uid&&!S.players.some(p=>p.id===m.uid)&&S.players.length<4){S.players.push({id:m.uid,name:m.name||'Player',team:null})}
+    else if(m.t==='team'&&S.mode==='lobby'){const p=S.players.find(x=>x.id===m.uid);if(p&&p.team==null&&teamPlayers(m.team).length<2)p.team=m.team}
+    else if(m.t==='pick'&&m.uid===activeIdFor(m.team))lock(m.team,m.n);
+    else if(m.t==='review'&&m.uid===activeIdFor(S.reviewing))handleReview(m.decision);
+    else if(m.t==='go'&&m.uid===activeIdFor(bowl()))act();
+    else if(m.t==='choose'&&m.uid===captainFor(S.tw)?.id)choose(m.c);
+    else if(m.t==='again')again();
+    showLobby();return;
+  }
   if(m.t==='arrived'){net.guestConnected=true;showWait()}
   else if(m.t==='name'){net.gname=m.name;setName(1,m.name);unmodal();beginCuffSetup()}
   else if(m.t==='theme'){S.cuffs[1]=m.color;S.themeReady[1]=true;showHands(0,0,false);completeCuffSetup()}
@@ -652,15 +704,16 @@ function receiveGuestAction(m){
 async function host(){
   try{
     await ensureAuth();
-    net.role='host';net.gname=null;net.guestConnected=false;applyRole();
+    net.role='host';net.uid=fbAuth.currentUser.uid;applyRole();
     for(let attempt=0;attempt<8;attempt++){
       const code=roomCode(),room=fbDb.ref('rooms/'+code);
       const claim=await room.transaction(current=>current===null?{hostId:fbAuth.currentUser.uid,createdAt:firebase.database.ServerValue.TIMESTAMP}:undefined);
       if(!claim.committed)continue;
       net.code=code;net.room=room;net.last='';net.lastAction='';
       room.onDisconnect().remove();
-      room.child('guestAction').on('value',s=>receiveGuestAction(s.val()));
-      showWait();return;
+      S.mode='lobby';S.state='lobby';S.players=[{id:net.uid,name:NAMES[0],team:0}];S.activeBat=null;S.activeBowl=null;NAMES[0]='Team Blue';NAMES[1]='Team Orange';
+      room.child('actions').on('child_added',s=>receiveGuestAction(s.val()));
+      applyRole();render();showLobby();return;
     }
     throw new Error('Could not reserve a room code. Please try again.');
   }catch(e){fail(e)}
@@ -670,20 +723,16 @@ async function join(code){
     await ensureAuth();
     const room=fbDb.ref('rooms/'+code),current=(await room.once('value')).val();
     if(!current)throw new Error('No active room found with that code. Ask your friend to create a new room.');
-    if(current.guestId&&current.guestId!==fbAuth.currentUser.uid)throw new Error('That room already has two players.');
-    net.role='guest';net.code=code;net.room=room;net.wait=false;net.cuffPicked=false;net.cuffPickerOpen=false;applyRole();
-    const seat=await room.child('guestId').transaction(existing=>!existing||existing===fbAuth.currentUser.uid?fbAuth.currentUser.uid:undefined);
-    if(!seat.committed)throw new Error('That room was just filled by another player.');
-    room.child('guestId').onDisconnect().remove();
+    if(current.state&&current.state.S&&current.state.S.players&&current.state.S.players.length>=4)throw new Error('That room is full.');
+    net.role='player';net.uid=fbAuth.currentUser.uid;net.code=code;net.room=room;net.wait=false;applyRole();
     room.child('state').on('value',s=>{const d=s.val();if(d)apply(d)});
-    send({t:'arrived'});
-    askName(1,()=>{net.wait=true;modal('Connected','Joining the match…',[]);send({t:'name',name:NAMES[1]})});
+    askName(1,()=>{unmodal();send({t:'join',name:NAMES[1]})});
   }catch(e){fail(e)}
 }
 function snap(){
   const g=id=>$(id).innerHTML;
   const fx=p=>({text:$('fx'+p).textContent,cls:$('fx'+p).className});
-  return {S:{inn:S.inn,score:S.score,target:S.target,state:S.state,mode:S.mode,first:S.first,tw:S.tw,balls:S.balls,runs:S.runs,wickets:S.wickets,reviews:S.reviews,maxOvers:S.maxOvers,maxWickets:S.maxWickets,reviewing:S.reviewing,reviewId:S.reviewId,pendingOut:S.pendingOut,reviewDeadline:S.reviewDeadline,noticeId:S.noticeId,noticeTitle:S.noticeTitle,noticeDetail:S.noticeDetail,noticeUntil:S.noticeUntil,resultPhase:S.resultPhase,resultTitle:S.resultTitle,resultDetail:S.resultDetail,bk:S.bk,intro:S.intro,tossStarted:S.tossStarted,cuffs:S.cuffs,themeReady:S.themeReady,themePrompt:S.themePrompt},names:NAMES,guestReady:!!net.gname,count:$('count').textContent,h0:g('h0'),h1:g('h1'),n0:$('n0').textContent,n1:$('n1').textContent,fx:[fx(0),fx(1)],log:g('log'),tossShow:$('tossOv').classList.contains('show'),ovShow:$('ov').classList.contains('show'),wt:$('wt').textContent,ws:$('ws').textContent,tb:g('tb')};
+  return {S:{inn:S.inn,score:S.score,target:S.target,state:S.state,mode:S.mode,first:S.first,tw:S.tw,bk:S.bk,pick:S.pick,balls:S.balls,runs:S.runs,wickets:S.wickets,reviews:S.reviews,maxOvers:S.maxOvers,maxWickets:S.maxWickets,reviewing:S.reviewing,reviewId:S.reviewId,pendingOut:S.pendingOut,reviewDeadline:S.reviewDeadline,noticeId:S.noticeId,noticeTitle:S.noticeTitle,noticeDetail:S.noticeDetail,noticeUntil:S.noticeUntil,resultPhase:S.resultPhase,resultTitle:S.resultTitle,resultDetail:S.resultDetail,players:S.players,activeBat:S.activeBat,activeBowl:S.activeBowl,intro:S.intro,tossStarted:S.tossStarted,cuffs:S.cuffs,themeReady:S.themeReady,themePrompt:S.themePrompt},names:NAMES,guestReady:true,count:$('count').textContent,h0:g('h0'),h1:g('h1'),n0:$('n0').textContent,n1:$('n1').textContent,fx:[fx(0),fx(1)],log:g('log'),tossShow:$('tossOv').classList.contains('show'),ovShow:$('ov').classList.contains('show'),wt:$('wt').textContent,ws:$('ws').textContent,tb:g('tb')};
 }
 setInterval(()=>{
   if(net.role!=='host'||!net.room)return;
@@ -700,6 +749,7 @@ function apply(d){
   if(d.fx)d.fx.forEach((f,i)=>{const el=$('fx'+i);if(el.textContent!==f.text||el.className!==f.cls){el.textContent=f.text;el.className=f.cls}});
   if($('log').innerHTML!==d.log)$('log').innerHTML=d.log;
   if(mc)buildKeys();
+  applyRole();showLobby();
   if(nb){
     clearSel();$('l1').textContent='Choose now';$('l1').className='lock';
     const bar=$('bar');bar.classList.remove('run');void bar.offsetWidth;bar.classList.add('run');
