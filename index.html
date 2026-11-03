@@ -582,9 +582,10 @@ function askName(i,cb){
   const title=online()?'Your player name':`Player ${i+1}, choose your name`;
   modal(title,`<div style="color:var(--muted);font-size:14px">This name will appear for both players after you continue.</div><input id="mi" maxlength="14" placeholder="Player ${i+1}" autocomplete="name">`,[['Continue',()=>{setName(i,$('mi').value.trim().slice(0,14)||'Player '+(i+1));unmodal();cb()}]]);
 }
-function askMatchSetup(cb){
+function askMatchSetup(cb,roomMatch=false){
   const options=n=>[1,2,3].map(v=>`<option value="${v}" ${v===n?'selected':''}>${v}</option>`).join('');
-  modal('Match setup',`<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;text-align:left"><label>Overs<select id="setOvers" style="width:100%;margin-top:5px;padding:10px;border-radius:9px;background:var(--night);color:var(--bone);border:1px solid var(--line)">${options(S.maxOvers)}</select></label><label>Wickets<select id="setWickets" style="width:100%;margin-top:5px;padding:10px;border-radius:9px;background:var(--night);color:var(--bone);border:1px solid var(--line)">${options(S.maxWickets)}</select></label></div><div style="font-size:12px;color:var(--muted);margin-top:12px">Each batter also has one review.</div>`,[['Continue',()=>{S.maxOvers=+$('setOvers').value;S.maxWickets=+$('setWickets').value;unmodal();cb()}]]);
+  const wicketField=roomMatch?`<label>Wickets<div style="margin-top:5px;padding:10px;border:1px solid var(--line);border-radius:9px;color:var(--bone)">2 fixed</div></label>`:`<label>Wickets<select id="setWickets" style="width:100%;margin-top:5px;padding:10px;border-radius:9px;background:var(--night);color:var(--bone);border:1px solid var(--line)">${options(S.maxWickets)}</select></label>`;
+  modal(roomMatch?'Online match setup':'Match setup',`<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;text-align:left"><label>Overs<select id="setOvers" style="width:100%;margin-top:5px;padding:10px;border-radius:9px;background:var(--night);color:var(--bone);border:1px solid var(--line)">${options(S.maxOvers)}</select></label>${wicketField}</div><div style="font-size:12px;color:var(--muted);margin-top:12px">${roomMatch?'Online rooms use two wickets.':'Each batter also has one review.'}</div>`,[['Continue',()=>{S.maxOvers=+$('setOvers').value;S.maxWickets=roomMatch?2:+$('setWickets').value;unmodal();cb()}]]);
 }
 function applyRole(){
   const solo=net.role==='solo';
@@ -619,7 +620,7 @@ function tossView(show,title){
 function menu(){
   modal('Hand Cricket','Two players, one fist at a time. How do you want to play?',[
     ['Play vs AI',()=>{unmodal();ai=true;net.role='solo';applyRole();askName(0,()=>askMatchSetup(()=>{setName(1,'AI');beginCuffSetup()}))}],
-    ['Create an online room',()=>{unmodal();ai=false;askName(0,()=>askMatchSetup(host))}],
+    ['Create an online room',()=>{unmodal();ai=false;askName(0,()=>askMatchSetup(host,true))}],
     ['Join with a room code',joinUI,1]]);
 }
 function joinUI(){
