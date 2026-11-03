@@ -27,8 +27,8 @@ h1 span{color:var(--leather)}
 .chip:focus-visible,button:focus-visible{outline:2px solid var(--brass);outline-offset:2px}
 .score{display:grid;grid-template-columns:1.4fr 1.1fr 1fr 1fr;gap:1px;background:linear-gradient(120deg,#07131d,#132735 58%,#10291d);border:1px solid rgba(210,235,243,.25);border-top:4px solid var(--brass);border-radius:15px;overflow:hidden;box-shadow:0 14px 25px rgba(0,0,0,.3);padding:0}
 .stat{min-width:0;padding:12px 10px;text-align:center;background:rgba(5,13,20,.36);border-left:1px solid rgba(255,255,255,.08)}
-.stat:first-child{border-left:0}.stat b{display:block;font-family:var(--head);font-size:clamp(20px,4vw,31px);line-height:1.12;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.stat small{display:block;color:#aebdca;font-size:10px;letter-spacing:.11em;text-transform:uppercase;margin-bottom:3px}.stat .nm{font-size:clamp(13px,2.7vw,17px)}
-.stat.score-main{background:linear-gradient(135deg,#132f46,#16405a)}.stat.score-main b{font-size:clamp(30px,6vw,48px);color:#fff}.stat.accent b{color:var(--brass)}.match-meta{grid-column:1/-1;display:grid;grid-template-columns:repeat(3,1fr);background:rgba(0,0,0,.28)}.match-meta .stat{padding:8px}.match-meta .stat b{font:700 clamp(13px,2.5vw,16px) var(--body)}
+.stat:first-child{border-left:0}.stat b{display:block;font-family:var(--head);font-size:clamp(20px,4vw,31px);line-height:1.12;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.stat small{display:block;color:#aebdca;font-size:10px;letter-spacing:.11em;text-transform:uppercase;margin-bottom:3px}.stat .nm{font-size:clamp(18px,3.6vw,25px);color:#fff}
+.stat.score-main{background:linear-gradient(135deg,#132f46,#16405a)}.stat.score-main b{font-size:clamp(30px,6vw,48px);color:#fff}.stat.accent b{color:var(--brass)}.match-meta{grid-column:1/-1;display:grid;grid-template-columns:repeat(4,1fr);background:rgba(0,0,0,.28)}.match-meta .stat{padding:8px}.match-meta .stat b{font:700 clamp(12px,2.3vw,16px) var(--body)}
 .stage{margin:12px 0;border-radius:18px;background:linear-gradient(180deg,rgba(30,106,60,.92),rgba(12,58,34,.95));border:1px solid rgba(170,235,190,.27);padding:16px 10px;display:grid;grid-template-columns:1fr auto 1fr;gap:6px;align-items:center;position:relative;overflow:hidden;box-shadow:inset 0 1px rgba(255,255,255,.13),0 12px 22px rgba(0,0,0,.25)}
 .stage::before{content:'';position:absolute;inset:9px 28%;border-left:2px solid rgba(255,255,255,.27);border-right:2px solid rgba(255,255,255,.27);background:linear-gradient(90deg,transparent 46%,rgba(238,220,165,.33) 46% 54%,transparent 54%);pointer-events:none}
 .side{text-align:center;min-width:0}
@@ -46,7 +46,7 @@ h1 span{color:var(--leather)}
 @keyframes outHand{0%,100%{transform:rotate(0) scale(1)}28%{transform:rotate(-12deg) scale(1.16)}55%{transform:rotate(9deg) scale(1.1)}}
 .num{font-family:var(--head);font-size:28px;margin-top:4px;min-height:34px}
 .impact{height:0;overflow:visible;font:900 clamp(24px,6vw,42px) var(--head);line-height:1;text-align:center;opacity:0;pointer-events:none;transform:translateY(-2px) scale(.3);text-shadow:0 4px 0 rgba(0,0,0,.22)}
-.impact.show{animation:impact 1.3s cubic-bezier(.16,1.2,.3,1) forwards}.impact.run{color:var(--brass)}.impact.out{color:#ff8a80}
+.impact.show{animation:impact 1.3s cubic-bezier(.16,1.2,.3,1) forwards}.impact.run{color:var(--brass)}.impact.out{color:#ff645d}.impact.notout{color:#6ee58d}
 @keyframes impact{0%{opacity:0;transform:translateY(9px) scale(.25)}28%{opacity:1;transform:translateY(-4px) scale(1.25)}55%{opacity:1;transform:translateY(-1px) scale(1)}100%{opacity:0;transform:translateY(-12px) scale(.84)}}
 .mid{text-align:center;width:min(150px,28vw)}
 .count{font-family:var(--head);font-size:clamp(30px,8vw,54px);min-height:62px;line-height:62px}
@@ -83,7 +83,7 @@ h1 span{color:var(--leather)}
 .card table{width:100%;border-collapse:collapse;margin:16px 0}
 .card td,.card th{padding:8px;border-bottom:1px solid var(--line);font-size:15px}
 .card th{color:var(--muted);font-weight:600;font-size:12px}
-@media(max-width:640px){body::before,body::after{height:210px;opacity:.55}.pads{grid-template-columns:1fr}.score{grid-template-columns:repeat(2,1fr)}.match-meta{grid-template-columns:repeat(3,1fr)}.stage{grid-template-columns:1fr 1fr}.mid{grid-column:1/-1;order:-1;width:100%}.hand{width:min(120px,34vw)}.hand-box{height:140px}}
+@media(max-width:640px){body::before,body::after{height:210px;opacity:.55}.pads{grid-template-columns:1fr}.score{grid-template-columns:repeat(2,1fr)}.match-meta{grid-template-columns:repeat(2,1fr)}.stage{grid-template-columns:1fr 1fr}.mid{grid-column:1/-1;order:-1;width:100%}.hand{width:min(120px,34vw)}.hand-box{height:140px}}
 @media(prefers-reduced-motion:reduce){.shake,.pop,.flash,.score-pop,.out-pop,.impact.show{animation-duration:.01s!important}}
 .intro-card{border-top-color:var(--leather)}.intro-card h2{font-size:clamp(30px,9vw,48px)}.intro-n{font:clamp(56px,16vw,90px)/1 var(--head);color:var(--brass);margin:12px 0 0}
 .cuff-preview{width:136px;height:30px;margin:18px auto;border-radius:8px;background:var(--cuff);border:2px solid rgba(255,255,255,.25);box-shadow:inset 0 4px 8px rgba(255,255,255,.2),0 7px 13px rgba(0,0,0,.25)}
@@ -109,6 +109,7 @@ h1 span{color:var(--leather)}
  <div class="match-meta">
   <div class="stat"><small>Wickets</small><b id="sWk">0/1</b></div>
   <div class="stat"><small>Reviews left</small><b id="sReview">1</b></div>
+  <div class="stat"><small>Bowling</small><b id="sBowler">—</b></div>
   <div class="stat"><small id="sNeedL">Match status</small><b id="sTarget">Set a target</b></div>
  </div>
 </section>
@@ -142,6 +143,8 @@ h1 span{color:var(--leather)}
 <div class="ov" id="winOv"><div class="card winner-card" role="status" aria-live="assertive"><h2 id="winTitle"></h2><p id="winDetail"></p></div></div>
 
 <div class="ov" id="matchOv"><div class="card winner-card" role="status" aria-live="assertive"><h2 id="matchTitle"></h2><p id="matchDetail"></p></div></div>
+
+<div class="ov" id="reviewOv"><div class="card winner-card" role="status" aria-live="assertive"><h2 id="reviewTitle"></h2><p id="reviewDetail"></p></div></div>
 
 <div class="ov" id="lobbyOv"><div class="card" role="dialog" aria-modal="true"><h2>Team lobby</h2><div id="lobbyBody" style="color:var(--muted);margin-bottom:16px"></div><div id="lobbyButtons" style="display:grid;gap:8px"></div></div></div>
 
@@ -191,8 +194,8 @@ function reset(){
   timers.forEach(clearTimeout);timers=[];
   const oldCuffs=S&&S.cuffs?S.cuffs:['#15191f','#15191f'];
   const oldOvers=S&&S.maxOvers||1,oldWickets=S&&S.maxWickets||1;
-  S={inn:1,score:0,target:null,state:'idle',mode:'toss',first:0,tw:0,bk:0,pick:[null,null],balls:[0,0],runs:[0,0],wickets:[0,0],reviews:[1,1],maxOvers:oldOvers,maxWickets:oldWickets,reviewing:null,reviewId:0,pendingOut:null,reviewDeadline:0,noticeId:0,noticeTitle:'',noticeDetail:'',noticeUntil:0,resultPhase:0,resultTitle:'',resultDetail:'',players:null,activeBat:null,activeBowl:null,log:[],intro:0,tossStarted:false,cuffs:oldCuffs,themeReady:[true,true],themePrompt:false};
-  $('ov').classList.remove('show');$('winOv').classList.remove('show');$('matchOv').classList.remove('show');$('tossOv').classList.remove('show');showTossIntro(0);clearImpacts();buildKeys();
+  S={inn:1,score:0,target:null,state:'idle',mode:'toss',first:0,tw:0,bk:0,pick:[null,null],balls:[0,0],runs:[0,0],wickets:[0,0],reviews:[1,1],maxOvers:oldOvers,maxWickets:oldWickets,reviewing:null,reviewId:0,pendingOut:null,reviewDeadline:0,noticeId:0,noticeTitle:'',noticeDetail:'',noticeUntil:0,resultPhase:0,resultTitle:'',resultDetail:'',players:null,activeBat:null,activeBowl:null,figures:{},log:[],intro:0,tossStarted:false,cuffs:oldCuffs,themeReady:[true,true],themePrompt:false};
+  $('ov').classList.remove('show');$('winOv').classList.remove('show');$('matchOv').classList.remove('show');$('reviewOv').classList.remove('show');$('tossOv').classList.remove('show');showTossIntro(0);clearImpacts();buildKeys();
   $('log').innerHTML='<p class="t">Play rock paper scissors to decide the toss. Picks stay hidden until the reveal.</p>';
   $('count').textContent='Ready';
   render();showHands(0,0,false);
@@ -205,9 +208,12 @@ const localPlayer=()=>teamMode()?S.players.find(p=>p.id===net.uid):null;
 const localTeam=()=>teamMode()?(localPlayer()?.team??-1):me();
 const activeIdFor=t=>t===bat()?S.activeBat:S.activeBowl;
 const playerLabel=t=>{const p=teamMode()?S.players.find(x=>x.id===activeIdFor(t)):null;return p?p.name:NAMES[t]};
-const canControlSide=t=>teamMode()?activeIdFor(t)===net.uid:(!online()||me()===t);
+const canControlSide=t=>teamMode()?(S.mode==='review'?captainFor(t)?.id===net.uid:activeIdFor(t)===net.uid):(!online()||me()===t);
 const captainFor=t=>teamPlayers(t)[0];
 const canChooseToss=()=>!teamMode()?(!online()||me()===S.tw):captainFor(S.tw)?.id===net.uid;
+const bowlerKey=()=>teamMode()?S.activeBowl:'side'+bowl();
+function bowlerFigure(){const f=(S.figures||{})[bowlerKey()]||{balls:0,runs:0,wickets:0};return `${Math.floor(f.balls/6)}.${f.balls%6}-${f.runs}-${f.wickets}`}
+function addBowlerFigure(runs=0,wicket=false){S.figures||={};const k=bowlerKey(),f=S.figures[k]||(S.figures[k]={balls:0,runs:0,wickets:0});f.balls++;f.runs+=runs;if(wicket)f.wickets++}
 
 function render(){
   const T=S.mode==='toss',b=bat(),wk=S.wickets[b],left=Math.max(S.maxWickets-wk,0);
@@ -217,6 +223,7 @@ function render(){
   $('sOvers').textContent=T?'–':`${Math.floor(S.balls[b]/6)}.${S.balls[b]%6}/${S.maxOvers}`;
   $('sWk').textContent=T?'–':`${wk}/${S.maxWickets}`;
   $('sReview').textContent=T?'–':S.reviews[b];
+  $('sBowler').textContent=T?'—':`${S.mode==='review'&&S.pendingOut?S.pendingOut.bowlerName:playerLabel(bowl())} · ${bowlerFigure()}`;
   const overText=`${Math.floor(S.balls[b]/6)}.${S.balls[b]%6}/${S.maxOvers} ov`;
   $('sNeedL').textContent=T?'Match format':S.target==null?'Wickets left':'To win';
   $('sTarget').textContent=T?`${S.maxOvers} ov · ${S.maxWickets} wkts`:S.target==null?`${left} left`:`${Math.max(S.target-S.score,0)} runs`;
@@ -353,14 +360,14 @@ function reveal(){
   else{runs=B;msg=say(RUN[B],o)}
   if(runs>=4)cls='b';
   if(out){
-    S.pendingOut={B,W,msg:say(B===0?DF:OUT,o),cls:'o'};S.reviewing=bat();S.state='reviewOffer';S.reviewId++;S.reviewDeadline=Date.now()+3000;
+    S.pendingOut={B,W,msg:say(B===0?DF:OUT,o),cls:'o',batterName:playerLabel(bat()),bowlerName:playerLabel(bowl())};S.reviewing=bat();S.state='reviewOffer';S.reviewId++;S.reviewDeadline=Date.now()+3000;
     // The host is authoritative: an unanswered review expires after 3 seconds,
     // even if the batter's browser disconnects or never sends a choice.
     if(net.role!=='guest')timers.push(setTimeout(()=>{if(S.state==='reviewOffer'&&Date.now()>=S.reviewDeadline)handleReview('decline')},3100));
-    render();maybePromptReview();return;
+    render();showReviewStatus();maybePromptReview();return;
   }
   showImpact(bat(),'+'+runs,'run');timers.push(setTimeout(()=>animateHand(bat(),'score-pop'),100));
-  S.score+=runs;S.runs[bat()]=S.score;S.balls[bat()]++;
+  S.score+=runs;S.runs[bat()]=S.score;S.balls[bat()]++;addBowlerFigure(runs);
   const n=S.balls[bat()];
   const log=document.createElement('p');log.className=cls;
   log.textContent=`Inn ${S.inn} · ball ${n} · ${B} v ${W}: ${msg} (${S.score})`;
@@ -388,15 +395,15 @@ function appendBallLog(msg,cls='t'){
 }
 function finalizeOut(){
   const b=bat(),p=S.pendingOut;if(!p)return;
-  S.mode='game';S.pendingOut=null;S.reviewing=null;S.reviewDeadline=0;buildKeys();S.balls[b]++;S.wickets[b]++;
+  S.mode='game';S.pendingOut=null;S.reviewing=null;S.reviewDeadline=0;buildKeys();S.balls[b]++;S.wickets[b]++;addBowlerFigure(0,true);
   if(teamMode()){const batters=teamPlayers(b);if(batters.length>1){const i=batters.findIndex(x=>x.id===S.activeBat);S.activeBat=batters[(i+1)%batters.length].id}}
   showImpact(bowl(),'OUT!','out');timers.push(setTimeout(()=>animateHand(bowl(),'out-pop'),100));
-  appendBallLog(p.msg,'o');flash('out');beep(140,.5,'sawtooth');render();finishBall();
+  appendBallLog(p.msg,'o');flash('out');beep(140,.5,'sawtooth');render();showReviewStatus();finishBall();
 }
 function surviveReview(){
-  const b=bat();S.mode='game';S.pendingOut=null;S.reviewing=null;S.reviewDeadline=0;buildKeys();S.balls[b]++;
-  showImpact(b,'SAVED!','run');timers.push(setTimeout(()=>animateHand(b,'score-pop'),100));
-  appendBallLog(`${playerLabel(b)} wins the review — not out.`,'b');beep(680,.25,'triangle');render();finishBall();
+  const b=bat();S.mode='game';S.pendingOut=null;S.reviewing=null;S.reviewDeadline=0;buildKeys();S.balls[b]++;addBowlerFigure();
+  showImpact(b,'NOT OUT!','notout');timers.push(setTimeout(()=>animateHand(b,'score-pop'),100));
+  appendBallLog(`${playerLabel(b)} wins the review — not out.`,'b');beep(680,.25,'triangle');render();showReviewStatus();finishBall();
 }
 function maybePromptReview(){
   if(S.state!=='reviewOffer'||net.seenReview===S.reviewId)return;
@@ -433,7 +440,7 @@ function beginReviewRPS(){
   $('n0').textContent=$('n1').textContent='';showHands(0,0,false);
   const bar=$('bar');bar.classList.remove('run');void bar.offsetWidth;bar.classList.add('run');
   if(ai)timers.push(setTimeout(()=>lock(1,Math.floor(Math.random()*3)),400+Math.random()*1500));
-  timers.push(setTimeout(reveal,online()?3400:3000));render();
+  timers.push(setTimeout(reveal,online()?3400:3000));render();showReviewStatus();
 }
 function reviewReveal(auto){
   const H=[0,5,2],NM=['Rock','Paper','Scissors'],a=S.pick[0],b=S.pick[1],d=(a-b+3)%3;
@@ -443,6 +450,24 @@ function reviewReveal(auto){
   const winner=d===1?0:1;
   note(`${playerLabel(winner)} wins the review toss.`,winner===S.reviewing?'b':'o');
   if(winner===S.reviewing)surviveReview();else finalizeOut();
+}
+function showReviewStatus(){
+  const status=$('reviewOv');
+  if(S.state==='reviewOffer'){
+    if(canControlSide(S.reviewing)){status.classList.remove('show');return}
+    const name=S.pendingOut?.batterName||playerLabel(S.reviewing);
+    $('reviewTitle').textContent=`${name} is thinking…`;
+    $('reviewDetail').textContent='Will they send this one upstairs for a review?';
+    status.classList.add('show');return;
+  }
+  if(S.mode==='review'){
+    const mine=teamMode()?captainFor(localTeam())?.id===net.uid:true;
+    if(mine){status.classList.remove('show');return}
+    $('reviewTitle').textContent='Captains’ decision pending';
+    $('reviewDetail').textContent='The captains are settling the review with rock, paper, scissors.';
+    status.classList.add('show');return;
+  }
+  status.classList.remove('show');
 }
 function flash(c){if(!c)return;const f=$('flash');f.className='flash';void f.offsetWidth;f.className='flash '+c}
 
@@ -692,7 +717,7 @@ function receiveGuestAction(m){
   if(teamMode()){
     if(m.t==='join'&&S.mode==='lobby'&&m.uid&&!S.players.some(p=>p.id===m.uid)&&S.players.length<4){S.players.push({id:m.uid,name:m.name||'Player',team:null})}
     else if(m.t==='team'&&S.mode==='lobby'){const p=S.players.find(x=>x.id===m.uid);if(p&&p.team==null&&teamPlayers(m.team).length<2)p.team=m.team}
-    else if(m.t==='pick'&&m.uid===activeIdFor(m.team))lock(m.team,m.n);
+    else if(m.t==='pick'&&m.uid===(S.mode==='review'?captainFor(m.team)?.id:activeIdFor(m.team)))lock(m.team,m.n);
     else if(m.t==='review'&&m.uid===activeIdFor(S.reviewing))handleReview(m.decision);
     else if(m.t==='go'&&m.uid===activeIdFor(bowl())&&(S.state==='idle'||S.state==='break')&&Date.now()>=S.noticeUntil){timers.forEach(clearTimeout);timers=[];startBall()}
     else if(m.t==='choose'&&m.uid===captainFor(S.tw)?.id)choose(m.c);
@@ -739,7 +764,7 @@ async function join(code){
 function snap(){
   const g=id=>$(id).innerHTML;
   const fx=p=>({text:$('fx'+p).textContent,cls:$('fx'+p).className});
-  return {S:{inn:S.inn,score:S.score,target:S.target,state:S.state,mode:S.mode,first:S.first,tw:S.tw,bk:S.bk,pick:S.pick,balls:S.balls,runs:S.runs,wickets:S.wickets,reviews:S.reviews,maxOvers:S.maxOvers,maxWickets:S.maxWickets,reviewing:S.reviewing,reviewId:S.reviewId,pendingOut:S.pendingOut,reviewDeadline:S.reviewDeadline,noticeId:S.noticeId,noticeTitle:S.noticeTitle,noticeDetail:S.noticeDetail,noticeUntil:S.noticeUntil,resultPhase:S.resultPhase,resultTitle:S.resultTitle,resultDetail:S.resultDetail,players:S.players,activeBat:S.activeBat,activeBowl:S.activeBowl,intro:S.intro,tossStarted:S.tossStarted,cuffs:S.cuffs,themeReady:S.themeReady,themePrompt:S.themePrompt},names:NAMES,guestReady:true,count:$('count').textContent,h0:g('h0'),h1:g('h1'),n0:$('n0').textContent,n1:$('n1').textContent,fx:[fx(0),fx(1)],log:g('log'),tossShow:$('tossOv').classList.contains('show'),ovShow:$('ov').classList.contains('show'),wt:$('wt').textContent,ws:$('ws').textContent,tb:g('tb')};
+  return {S:{inn:S.inn,score:S.score,target:S.target,state:S.state,mode:S.mode,first:S.first,tw:S.tw,bk:S.bk,pick:S.pick,balls:S.balls,runs:S.runs,wickets:S.wickets,reviews:S.reviews,maxOvers:S.maxOvers,maxWickets:S.maxWickets,reviewing:S.reviewing,reviewId:S.reviewId,pendingOut:S.pendingOut,reviewDeadline:S.reviewDeadline,noticeId:S.noticeId,noticeTitle:S.noticeTitle,noticeDetail:S.noticeDetail,noticeUntil:S.noticeUntil,resultPhase:S.resultPhase,resultTitle:S.resultTitle,resultDetail:S.resultDetail,players:S.players,activeBat:S.activeBat,activeBowl:S.activeBowl,figures:S.figures,intro:S.intro,tossStarted:S.tossStarted,cuffs:S.cuffs,themeReady:S.themeReady,themePrompt:S.themePrompt},names:NAMES,guestReady:true,count:$('count').textContent,h0:g('h0'),h1:g('h1'),n0:$('n0').textContent,n1:$('n1').textContent,fx:[fx(0),fx(1)],log:g('log'),tossShow:$('tossOv').classList.contains('show'),ovShow:$('ov').classList.contains('show'),wt:$('wt').textContent,ws:$('ws').textContent,tb:g('tb')};
 }
 setInterval(()=>{
   if(net.role!=='host'||!net.room)return;
@@ -766,6 +791,7 @@ function apply(d){
   showTossIntro(d.S.intro||0);
   if(net.wait&&d.guestReady){net.wait=false;unmodal()}
   maybePromptReview();
+  showReviewStatus();
   if(S.themePrompt&&net.role==='guest'&&!net.cuffPicked&&!net.cuffPickerOpen){
     net.cuffPickerOpen=true;
     openCuffPicker(1,color=>{
