@@ -216,7 +216,7 @@ const canControlSide=t=>teamMode()?(S.mode==='review'?captainFor(t)?.id===net.ui
 const captainFor=t=>teamPlayers(t).find(p=>p.captain)||teamPlayers(t)[0];
 function moveToTeam(player,team){
   const oldTeam=player.team;
-  player.team=team;
+  player.team=team;player.ready=false;
   if(oldTeam!=null&&oldTeam!==team&&!teamPlayers(oldTeam).length)resetTeamLook(oldTeam);
   if(oldTeam!=null){
     const oldRoster=teamPlayers(oldTeam);
@@ -235,6 +235,7 @@ function addBatting(runs=0,out=false){S.batting||={};const k=batterKey(),s=S.bat
 function render(){
   // Self-heal: the key layout must always match the phase (toss/review = RPS, game = 0-6) on every device.
   if(keysRps!==(S.mode==='toss'||S.mode==='review'))buildKeys();
+  applyRole(); // the host never receives snapshots, so keep its own pad visibility in sync here
   const T=S.mode==='toss',b=bat(),wk=S.wickets[b],left=Math.max(S.maxWickets-wk,0);
   $('sInn').textContent=T?'Toss':'#'+S.inn;
   $('sBat').textContent=T?'Rock paper scissors':playerLabel(b);
@@ -252,7 +253,7 @@ function render(){
   const normalLab=S.mode==='lobby'?'Start match':T?'Start toss':S.balls[0]+S.balls[1]===0?'Bowl first ball':S.state==='break'?'Start innings 2':'Next ball';
   const lab=teamMode()&&!T&&S.mode!=='lobby'&&!canControlSide(bowl())?'Waiting for the bowler':normalLab;
   $('go').textContent=lab;
-  const lobbyReady=S.mode==='lobby'&&teamPlayers(0).length>0&&teamPlayers(1).length>0;
+  const lobbyReady=S.mode==='lobby'&&lobbyStatus().ok;
   $('go').disabled=(S.mode==='lobby'?!lobbyReady||net.role!=='host':S.state==='pick'||S.state==='strategy'||S.state==='over'||S.state==='choose'||S.state==='intro'||S.state==='reviewOffer'||now()<S.noticeUntil||!canControlSide(bowl()));
   document.querySelectorAll('.keys button').forEach(x=>x.disabled=S.state!=='pick'||(ai&&x.dataset.p==='1')||!canControlSide(+x.dataset.p));
 }
@@ -329,6 +330,30 @@ function beep(f,d,t){
   }catch(e){}
 }
 
+/* ---------- sound & haptics: each moment has its own sound and vibration (vibration follows the sound toggle) ---------- */
+function tone(f,d,type='sine',at=0,vol=.08,to=null){
+  if(!snd)return;
+  try{
+    const c=beep.c||(beep.c=new (window.AudioContext||window.webkitAudioContext)());
+    if(c.state==='suspended')c.resume();
+    const t=c.currentTime+at,o=c.createOscillator(),g=c.createGain();
+    o.type=type;o.frequency.setValueAtTime(f,t);
+    if(to)o.frequency.exponentialRampToValueAtTime(to,t+d);
+    g.gain.setValueAtTime(vol,t);g.gain.exponentialRampToValueAtTime(.0001,t+d);
+    o.connect(g);g.connect(c.destination);o.start(t);o.stop(t+d+.02);
+  }catch(e){}
+}
+const buzz=p=>{try{if(snd&&navigator.vibrate)navigator.vibrate(p)}catch(e){}};
+const SFX={
+  reveal:()=>{tone(180,.09,'square',0,.05,90);tone(520,.06,'triangle',.02,.04);buzz(14)},
+  run:()=>tone(440,.14,'triangle',.12),
+  four:()=>{[523,659,784].forEach((f,i)=>tone(f,.16,'triangle',.12+i*.07,.08));buzz([22,30,22])},
+  six:()=>{[523,659,784,1047].forEach((f,i)=>tone(f,.2,'triangle',.12+i*.07,.09));tone(1047,.5,'sine',.42,.06);buzz([30,40,30,40,60])},
+  wicket:()=>{tone(300,.45,'sawtooth',.12,.08,70);tone(90,.35,'square',.12,.07,50);buzz([40,40,90])},
+  reviewWin:()=>{[392,523,659,784].forEach((f,i)=>tone(f,.18,'sine',i*.09,.09));buzz([18,30,18,30,40])},
+  reviewLoss:()=>{tone(330,.28,'sawtooth',0,.08,200);tone(220,.4,'sawtooth',.2,.08,110);tone(70,.5,'square',.2,.06);buzz([70,40,120])}
+};
+const sfx=n=>SFX[n]&&SFX[n]();
 const rnd=a=>a[Math.floor(Math.random()*a.length)];
 const say=(a,o)=>rnd(a).replace(/\{(\w)\}/g,(_,k)=>o[k]);
 const OUT=['OUT! {w} read {b} like a bad poem. Both showed {B}!','Twin {B}s! {b} and {w} had the same idea, and only one gets to keep the bat.','{b} walks back muttering about psychic bowlers.','Timber! {b} fell for the oldest trick: thinking like a {B}.','That is out. {w} celebrates like they just won the lottery.','{b}’s wicket falls to a sad little trombone. Both on {B}.','Same number, big drama. {b} is out and the umpire is not sorry.','{w} stared into {b}’s soul and found a {B}. Out!'];
@@ -362,7 +387,7 @@ function lock(p,n){
 }
 
 function reveal(){
-  $('count').textContent='Reveal!';
+  $('count').textContent='Reveal!';sfx('reveal');
   const auto=[false,false],T=S.mode==='toss',R=S.mode==='review';
   for(let p=0;p<2;p++)if(S.pick[p]==null){S.pick[p]=Math.floor(Math.random()*((T||R)?3:7));auto[p]=true}
   if(T)return tossReveal(auto);
@@ -394,7 +419,7 @@ function reveal(){
   if(S.log.length===0)$('log').innerHTML='';
   S.log.push(1);$('log').prepend(log);
   flash(runs>=4?'big':'');
-  beep(runs>=4?740:440,.2,'triangle');
+  sfx(runs>=6?'six':runs>=4?'four':'run');
   render();
   finishBall();
 }
@@ -411,19 +436,19 @@ function appendBallLog(msg,cls='t'){
   p.textContent=`Inn ${S.inn} · ball ${S.balls[bat()]} · ${msg} (${S.score})`;
   if(S.log.length===0)$('log').innerHTML='';S.log.push(1);$('log').prepend(p);
 }
-function finalizeOut(){
+function finalizeOut(viaReview){
   const b=bat(),p=S.pendingOut;if(!p)return;
   S.mode='game';S.pendingOut=null;S.reviewing=null;S.reviewDeadline=0;buildKeys();S.balls[b]++;S.wickets[b]++;addBatting(0,true);addBowlerFigure(0,true);
   if(teamMode()){const batters=teamPlayers(b);if(batters.length>1){const i=batters.findIndex(x=>x.id===S.activeBat);S.activeBat=batters[(i+1)%batters.length].id}}
   showImpact(bowl(),'OUT!','out');timers.push(setTimeout(()=>animateHand(bowl(),'out-pop'),100));
-  appendBallLog(p.msg,'o');flash('out');beep(140,.5,'sawtooth');render();showReviewStatus();
+  appendBallLog(p.msg,'o');flash('out');sfx(viaReview?'reviewLoss':'wicket');render();showReviewStatus();
   if(teamMode()&&teamPlayers(b).length>1&&S.wickets[b]<S.maxWickets){beginStrategy('nextBatter',b,'bat');return}
   finishBall();
 }
 function surviveReview(){
   const b=bat();S.mode='game';S.pendingOut=null;S.reviewing=null;S.reviewDeadline=0;buildKeys();S.balls[b]++;addBatting();addBowlerFigure();
   showImpact(b,'NOT OUT!','notout');timers.push(setTimeout(()=>animateHand(b,'score-pop'),100));
-  appendBallLog(`${playerLabel(b)} wins the review — not out.`,'b');beep(680,.25,'triangle');render();showReviewStatus();finishBall();
+  appendBallLog(`${playerLabel(b)} wins the review — not out.`,'b');sfx('reviewWin');render();showReviewStatus();finishBall();
 }
 function maybePromptReview(){
   if(S.state!=='reviewOffer'||net.seenReview===S.reviewId)return;
@@ -469,7 +494,7 @@ function reviewReveal(auto){
   if(d===0){note('Review tied — play rock-paper-scissors again.','t');S.state='idle';render();timers.push(setTimeout(beginReviewRPS,1500));return}
   const winner=d===1?0:1;
   note(`${playerLabel(winner)} wins the review toss.`,winner===S.reviewing?'b':'o');
-  if(winner===S.reviewing)surviveReview();else finalizeOut();
+  if(winner===S.reviewing)surviveReview();else finalizeOut(true);
 }
 function showReviewStatus(){
   const status=$('reviewOv');
@@ -566,7 +591,6 @@ function tossReveal(auto){
   $('l0').textContent=$('l1').textContent='Waiting';$('l0').className=$('l1').className='lock';
   const d=(a-b+3)%3,p=document.createElement('p');
   if(S.log.length===0)$('log').innerHTML='';S.log.push(1);
-  beep(440,.2,'triangle');
   if(d===0){
     p.className='t';p.textContent='Toss: both showed '+NM[a]+'. Go again.';$('log').prepend(p);
     S.state='idle';render();
@@ -805,7 +829,7 @@ function again(){
   if(teamMode()){
     const roster=S.players.map(p=>({...p}));reset();
     $('nm0').textContent=NAMES[0];$('nm1').textContent=NAMES[1];
-    S.players=roster;S.mode='lobby';S.state='lobby';S.activeBat=null;S.activeBowl=null;
+    S.players=roster.map(p=>({...p,ready:false}));S.mode='lobby';S.state='lobby';S.activeBat=null;S.activeBowl=null;
     render();showLobby();return;
   }
   reset();beginToss();
@@ -833,6 +857,16 @@ function showWait(){
   const status=net.guestConnected?'Player 2 is choosing a name…':'Waiting for Player 2 to join…';
   modal('Invite Player 2',`Share this code or link.<code>${net.code}</code><div style="font-size:12px;word-break:break-all">${link}</div><p>${status}</p>`,[['Copy link',e=>{try{navigator.clipboard.writeText(link);e.target.textContent='Copied'}catch(x){}}]]);
 }
+// Everyone must be on a side and ready before the host can start.
+function lobbyStatus(){
+  const ps=S.players||[];
+  if(!(teamPlayers(0).length&&teamPlayers(1).length))return{ok:false,msg:'Waiting for both sides'};
+  const un=ps.filter(p=>p.team==null).length;
+  if(un)return{ok:false,msg:`Waiting for ${un} to pick a side`};
+  const nr=ps.filter(p=>!p.ready).length;
+  if(nr)return{ok:false,msg:`Waiting for ${nr} to be ready`};
+  return{ok:true,msg:''};
+}
 function resetTeamLook(t){S.cuffs[t]='#15191f';S.cuffSet=S.cuffSet||[false,false];S.cuffSet[t]=false;NAMES[t]=t?'Right Team':'Left Team';$('nm'+t).textContent=NAMES[t]}
 // The captain's cuff colour names the team (green cuff = Team Green). Two teams can't share a colour.
 function setTeamLook(t,i){
@@ -848,7 +882,7 @@ function showLobby(){
   const set=S.cuffSet||[false,false],mine=localPlayer();
   const ink=t=>set[t]?S.cuffs[t]:'var(--bone)';
   const slot=t=>{
-    const ps=teamPlayers(t).map(p=>`<div class="lp">${p.captain?'★ ':''}${p.name}${p.captain?' <small style="display:inline;letter-spacing:0">captain</small>':''}${(S.connected||{})[p.id]?'':' <small style="display:inline;letter-spacing:0">· reconnecting…</small>'}</div>`).join('')||'<div class="lp" style="color:var(--muted)">Open slot</div>';
+    const ps=teamPlayers(t).map(p=>`<div class="lp">${p.captain?'★ ':''}${p.name}${p.captain?' <small style="display:inline;letter-spacing:0">captain</small>':''}${p.ready?' <span style="color:#7ddc9a">✓ ready</span>':''}${(S.connected||{})[p.id]?'':' <small style="display:inline;letter-spacing:0">· reconnecting…</small>'}</div>`).join('')||'<div class="lp" style="color:var(--muted)">Open slot</div>';
     return `<div class="slot"><small>${t?'RIGHT SIDE':'LEFT SIDE'}</small><b style="color:${ink(t)}">${NAMES[t]}</b>${hand(0,SKIN[t],S.cuffs[t])}${ps}</div>`;
   };
   const pool=S.players.filter(p=>p.team==null).map(p=>p.name+((S.connected||{})[p.id]?'':' …')).join(', ')||'nobody';
@@ -859,7 +893,8 @@ function showLobby(){
   const body=`${invite}<div class="slots">${slot(0)}${slot(1)}</div><p style="font-size:12px;margin:10px 0 0">Not on a side yet: ${pool}. Up to two players per side.</p>${swatches}`;
   const btns=[];
   if(mine)[0,1].forEach(t=>{if(mine.team!==t&&teamPlayers(t).length<2)btns.push([`${mine.team==null?'Join':'Switch to'} ${NAMES[t]} (${t?'right':'left'})`,()=>{if(net.role==='host'){moveToTeam(mine,t);render();showLobby()}else send({t:'team',team:t})}])});
-  if(net.role==='host'){const ready=teamPlayers(0).length&&teamPlayers(1).length;btns.push([ready?'Start team match':'Waiting for both sides',startTeamMatch,!ready]);btns.push(['Copy invite link',()=>navigator.clipboard?.writeText(link).catch(()=>{}),true])}
+  if(mine&&mine.team!=null)btns.unshift([mine.ready?'Not ready':'I’m ready',()=>{if(net.role==='host'){mine.ready=!mine.ready;render();showLobby()}else send({t:'ready',value:!mine.ready})},!!mine.ready]);
+  if(net.role==='host'){const st=lobbyStatus();btns.push([st.ok?'Start team match':st.msg,startTeamMatch,!st.ok]);btns.push(['Copy invite link',()=>navigator.clipboard?.writeText(link).catch(()=>{}),true])}
   const sig=body+btns.map(b=>b[0]+b[2]).join('|');
   $('lobbyOv').classList.add('show');
   if(net.lobbySig===sig)return;   // unchanged: don't rebuild, so clicks are never lost
@@ -870,7 +905,7 @@ function showLobby(){
   btns.forEach(([l,f,sec])=>{const b=document.createElement('button');b.className='go'+(sec?' sec':'');b.textContent=l;b.onclick=f;bx.appendChild(b)});
 }
 function startTeamMatch(){
-  if(net.role!=='host'||S.mode!=='lobby'||!teamPlayers(0).length||!teamPlayers(1).length)return;
+  if(net.role!=='host'||S.mode!=='lobby'||!lobbyStatus().ok)return;
   S.activeBat=captainFor(0).id;S.activeBowl=captainFor(1).id;S.mode='toss';S.state='idle';
   $('lobbyOv').classList.remove('show');buildKeys();render();publishState();beginToss();
 }
@@ -885,6 +920,7 @@ function receiveGuestAction(m){
   if(teamMode()){
     if(m.t==='join'&&S.mode==='lobby'&&m.uid&&!S.players.some(p=>p.id===m.uid)&&S.players.length<4){S.players.push({id:m.uid,name:m.name||'Player',team:null,captain:false})}
     else if(m.t==='team'&&S.mode==='lobby'){const p=S.players.find(x=>x.id===m.uid);if(p&&p.id!==S.players[0].id&&p.team!==m.team&&teamPlayers(m.team).length<2)moveToTeam(p,m.team)}
+    else if(m.t==='ready'&&S.mode==='lobby'){const p=S.players.find(x=>x.id===m.uid);if(p&&p.team!=null)p.ready=!!m.value}
     else if(m.t==='color'&&S.mode==='lobby'&&(m.team===0||m.team===1)&&m.uid===captainFor(m.team)?.id)setTeamLook(m.team,m.color);
     else if(m.t==='pick'&&m.uid===(S.mode==='review'?captainFor(m.team)?.id:activeIdFor(m.team)))lock(m.team,m.n);
     else if(m.t==='review'&&m.uid===activeIdFor(S.reviewing))handleReview(m.decision);
