@@ -484,28 +484,29 @@ function showReviewStatus(){
   }
   status.classList.remove('show');
 }
-function beginStrategy(kind,team,role){
+function beginStrategy(phase,team,role){
   const roster=teamPlayers(team),current=role==='bat'?S.activeBat:S.activeBowl;
-  const options=kind==='nextBowler'?roster.filter(p=>p.id!==current):roster;
-  if(options.length===1){selectStrategy(options[0].id,kind,team,role);return}
-  S.strategy={kind,team,role,options:options.map(p=>p.id)};S.strategyId++;net.seenStrategy=-1;S.state='strategy';render();showStrategyStatus();maybePromptStrategy();publishState();
+  const options=phase==='nextBowler'?roster.filter(p=>p.id!==current):roster;
+  S.strategy={phase,team,role,options:options.map(p=>p.id)};S.strategyId++;net.seenStrategy=-1;S.state='strategy';
+  render();showStrategyStatus();publishState();
+  if(options.length===1)selectStrategy(options[0].id);else maybePromptStrategy();
 }
 function maybePromptStrategy(){
   if(!S.strategy||net.seenStrategy===S.strategyId)return;
   const q=S.strategy;if(captainFor(q.team)?.id!==net.uid)return;
   net.seenStrategy=S.strategyId;
-  const title=q.role==='bat'?(q.kind==='openingBat'?'Choose opening batter':'Choose next batter'):(q.kind==='openingBowl'?'Choose opening bowler':'Choose next bowler');
+  const title=q.role==='bat'?(q.phase==='openingBat'?'Choose opening batter':'Choose next batter'):(q.phase==='openingBowl'?'Choose opening bowler':'Choose next bowler');
   const buttons=q.options.map(id=>{const p=S.players.find(x=>x.id===id);return [p.name,()=>{unmodal();answerStrategy(id)}]});
   modal(title,'Captain’s call.',buttons);
 }
 function answerStrategy(id){if(net.role==='host')selectStrategy(id);else send({t:'strategy',id})}
-function selectStrategy(id,kind=S.strategy?.kind,team=S.strategy?.team,role=S.strategy?.role){
-  if(!kind||!team&&team!==0)return;
-  if(role==='bat')S.activeBat=id;else S.activeBowl=id;
+function selectStrategy(id){
+  const q=S.strategy;if(!q||!q.options.includes(id))return;
+  if(q.role==='bat')S.activeBat=id;else S.activeBowl=id;
+  if(q.phase==='openingBat'){beginStrategy('openingBowl',1-S.first,'bowl');return}
   S.strategy=null;
-  if(kind==='openingBat'){beginStrategy('openingBowl',1-S.first,'bowl');publishState();return}
-  if(kind==='openingBowl'){S.state='idle';announce(`${playerLabel(bat())} opens the batting`,`${playerLabel(bowl())} takes the new ball.`,1800);render();showStrategyStatus();publishState();return}
-  S.state='idle';announce(`${role==='bat'?playerLabel(bat()):playerLabel(bowl())} is selected`,role==='bat'?'Ready for the next ball.':'New over, new bowler.',1200);render();showStrategyStatus();publishState();timers.push(setTimeout(()=>{if(S.state==='idle')startBall()},1400));
+  if(q.phase==='openingBowl'){S.state='idle';announce(`${playerLabel(bat())} opens the batting`,`${playerLabel(bowl())} takes the new ball.`,1800);render();showStrategyStatus();publishState();return}
+  S.state='idle';announce(`${q.role==='bat'?playerLabel(bat()):playerLabel(bowl())} is selected`,q.role==='bat'?'Ready for the next ball.':'New over, new bowler.',1200);render();showStrategyStatus();publishState();timers.push(setTimeout(()=>{if(S.state==='idle')startBall()},1400));
 }
 function showStrategyStatus(){
   const ov=$('strategyOv'),q=S.strategy;
