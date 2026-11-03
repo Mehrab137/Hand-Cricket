@@ -147,6 +147,8 @@ h1 span{color:var(--leather)}
 
 <div class="ov" id="reviewOv"><div class="card winner-card" role="status" aria-live="assertive"><h2 id="reviewTitle"></h2><p id="reviewDetail"></p></div></div>
 
+<div class="ov" id="strategyOv"><div class="card winner-card" role="status" aria-live="assertive"><h2 id="strategyTitle"></h2><p id="strategyDetail"></p></div></div>
+
 <div class="ov" id="lobbyOv"><div class="card" role="dialog" aria-modal="true"><h2>Team lobby</h2><div id="lobbyBody" style="color:var(--muted);margin-bottom:16px"></div><div id="lobbyButtons" style="display:grid;gap:8px"></div></div></div>
 
 <div class="ov" id="introOv"><div class="card intro-card" role="status" aria-live="assertive"><h2>Toss starting</h2><div style="color:var(--muted)">Get your hand ready</div><div class="intro-n" id="introN">3</div></div></div>
@@ -196,7 +198,7 @@ function reset(){
   const oldCuffs=S&&S.cuffs?S.cuffs:['#15191f','#15191f'];
   const oldOvers=S&&S.maxOvers||1,oldWickets=S&&S.maxWickets||1;
   S={inn:1,score:0,target:null,state:'idle',mode:'toss',first:0,tw:0,bk:0,pick:[null,null],balls:[0,0],runs:[0,0],wickets:[0,0],reviews:[1,1],maxOvers:oldOvers,maxWickets:oldWickets,reviewing:null,reviewId:0,pendingOut:null,reviewDeadline:0,noticeId:0,noticeTitle:'',noticeDetail:'',noticeUntil:0,resultPhase:0,resultTitle:'',resultDetail:'',players:null,connected:{},activeBat:null,activeBowl:null,figures:{},batting:{},strategy:null,strategyId:0,log:[],intro:0,tossStarted:false,cuffs:oldCuffs,themeReady:[true,true],themePrompt:false};
-  $('ov').classList.remove('show');$('winOv').classList.remove('show');$('matchOv').classList.remove('show');$('reviewOv').classList.remove('show');$('tossOv').classList.remove('show');showTossIntro(0);clearImpacts();buildKeys();
+  $('ov').classList.remove('show');$('winOv').classList.remove('show');$('matchOv').classList.remove('show');$('reviewOv').classList.remove('show');$('strategyOv').classList.remove('show');$('tossOv').classList.remove('show');showTossIntro(0);clearImpacts();buildKeys();
   $('log').innerHTML='<p class="t">Play rock paper scissors to decide the toss. Picks stay hidden until the reveal.</p>';
   $('count').textContent='Ready';
   render();showHands(0,0,false);
@@ -486,7 +488,7 @@ function beginStrategy(kind,team,role){
   const roster=teamPlayers(team),current=role==='bat'?S.activeBat:S.activeBowl;
   const options=kind==='nextBowler'?roster.filter(p=>p.id!==current):roster;
   if(options.length===1){selectStrategy(options[0].id,kind,team,role);return}
-  S.strategy={kind,team,role,options:options.map(p=>p.id)};S.strategyId++;S.state='strategy';render();maybePromptStrategy();
+  S.strategy={kind,team,role,options:options.map(p=>p.id)};S.strategyId++;S.state='strategy';render();showStrategyStatus();maybePromptStrategy();
 }
 function maybePromptStrategy(){
   if(!S.strategy||net.seenStrategy===S.strategyId)return;
@@ -502,8 +504,18 @@ function selectStrategy(id,kind=S.strategy?.kind,team=S.strategy?.team,role=S.st
   if(role==='bat')S.activeBat=id;else S.activeBowl=id;
   if(kind==='openingBat'){beginStrategy('openingBowl',1-S.first,'bowl');return}
   S.strategy=null;
-  if(kind==='openingBowl'){S.state='idle';announce(`${playerLabel(bat())} opens the batting`,`${playerLabel(bowl())} takes the new ball.`,1800);render();return}
-  S.state='idle';announce(`${role==='bat'?playerLabel(bat()):playerLabel(bowl())} is selected`,role==='bat'?'Ready for the next ball.':'New over, new bowler.',1200);render();timers.push(setTimeout(()=>{if(S.state==='idle')startBall()},1400));
+  if(kind==='openingBowl'){S.state='idle';announce(`${playerLabel(bat())} opens the batting`,`${playerLabel(bowl())} takes the new ball.`,1800);render();showStrategyStatus();return}
+  S.state='idle';announce(`${role==='bat'?playerLabel(bat()):playerLabel(bowl())} is selected`,role==='bat'?'Ready for the next ball.':'New over, new bowler.',1200);render();showStrategyStatus();timers.push(setTimeout(()=>{if(S.state==='idle')startBall()},1400));
+}
+function showStrategyStatus(){
+  const ov=$('strategyOv'),q=S.strategy;
+  if(!q){ov.classList.remove('show');return}
+  if(captainFor(q.team)?.id===net.uid){ov.classList.remove('show');return}
+  const captain=captainFor(q.team)?.name||NAMES[q.team];
+  const isBatter=q.role==='bat';
+  $('strategyTitle').textContent=`${captain} is choosing a ${isBatter?'batter':'bowler'}`;
+  $('strategyDetail').textContent=isBatter?'Captain is deciding who takes the crease next.':'Captain is deciding who will bowl the next over.';
+  ov.classList.add('show');
 }
 function flash(c){if(!c)return;const f=$('flash');f.className='flash';void f.offsetWidth;f.className='flash '+c}
 
@@ -882,6 +894,7 @@ function apply(d){
   maybePromptReview();
   maybePromptStrategy();
   showReviewStatus();
+  showStrategyStatus();
   if(S.themePrompt&&net.role==='guest'&&!net.cuffPicked&&!net.cuffPickerOpen){
     net.cuffPickerOpen=true;
     openCuffPicker(1,color=>{
