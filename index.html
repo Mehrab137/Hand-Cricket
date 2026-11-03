@@ -98,6 +98,7 @@ h1 span{color:var(--leather)}
  <div class="tg">
   <button class="chip" id="aiT" aria-pressed="false">Player 2: human</button>
   <button class="chip" id="sndT" aria-pressed="true">Sound on</button>
+  <button class="chip" id="endRoom" style="display:none">End room</button>
  </div>
 </header>
 
@@ -194,7 +195,7 @@ function reset(){
   timers.forEach(clearTimeout);timers=[];
   const oldCuffs=S&&S.cuffs?S.cuffs:['#15191f','#15191f'];
   const oldOvers=S&&S.maxOvers||1,oldWickets=S&&S.maxWickets||1;
-  S={inn:1,score:0,target:null,state:'idle',mode:'toss',first:0,tw:0,bk:0,pick:[null,null],balls:[0,0],runs:[0,0],wickets:[0,0],reviews:[1,1],maxOvers:oldOvers,maxWickets:oldWickets,reviewing:null,reviewId:0,pendingOut:null,reviewDeadline:0,noticeId:0,noticeTitle:'',noticeDetail:'',noticeUntil:0,resultPhase:0,resultTitle:'',resultDetail:'',players:null,activeBat:null,activeBowl:null,figures:{},batting:{},log:[],intro:0,tossStarted:false,cuffs:oldCuffs,themeReady:[true,true],themePrompt:false};
+  S={inn:1,score:0,target:null,state:'idle',mode:'toss',first:0,tw:0,bk:0,pick:[null,null],balls:[0,0],runs:[0,0],wickets:[0,0],reviews:[1,1],maxOvers:oldOvers,maxWickets:oldWickets,reviewing:null,reviewId:0,pendingOut:null,reviewDeadline:0,noticeId:0,noticeTitle:'',noticeDetail:'',noticeUntil:0,resultPhase:0,resultTitle:'',resultDetail:'',players:null,connected:{},activeBat:null,activeBowl:null,figures:{},batting:{},log:[],intro:0,tossStarted:false,cuffs:oldCuffs,themeReady:[true,true],themePrompt:false};
   $('ov').classList.remove('show');$('winOv').classList.remove('show');$('matchOv').classList.remove('show');$('reviewOv').classList.remove('show');$('tossOv').classList.remove('show');showTossIntro(0);clearImpacts();buildKeys();
   $('log').innerHTML='<p class="t">Play rock paper scissors to decide the toss. Picks stay hidden until the reveal.</p>';
   $('count').textContent='Ready';
@@ -209,7 +210,17 @@ const localTeam=()=>teamMode()?(localPlayer()?.team??-1):me();
 const activeIdFor=t=>t===bat()?S.activeBat:S.activeBowl;
 const playerLabel=t=>{const p=teamMode()?S.players.find(x=>x.id===activeIdFor(t)):null;return p?p.name:NAMES[t]};
 const canControlSide=t=>teamMode()?(S.mode==='review'?captainFor(t)?.id===net.uid:activeIdFor(t)===net.uid):(!online()||me()===t);
-const captainFor=t=>teamPlayers(t)[0];
+const captainFor=t=>teamPlayers(t).find(p=>p.captain)||teamPlayers(t)[0];
+function moveToTeam(player,team){
+  const oldTeam=player.team;
+  player.team=team;
+  if(oldTeam!=null){
+    const oldRoster=teamPlayers(oldTeam);
+    if(oldRoster.length&&!oldRoster.some(p=>p.captain))oldRoster[0].captain=true;
+  }
+  const newRoster=teamPlayers(team),existingCaptain=newRoster.find(p=>p.captain&&p.id!==player.id);
+  player.captain=!existingCaptain;
+}
 const canChooseToss=()=>!teamMode()?(!online()||me()===S.tw):captainFor(S.tw)?.id===net.uid;
 const bowlerKey=()=>teamMode()?S.activeBowl:'side'+bowl();
 const batterKey=()=>teamMode()?S.activeBat:'side'+bat();
@@ -541,7 +552,7 @@ function scorecardRows(){
     const bat=(S.batting||{})[p.id],bowl=(S.figures||{})[p.id];
     const batText=bat&&bat.balls?`${bat.runs} (${bat.balls})`:'—';
     const status=bat?(bat.out?'Out':'Not out'):'Did not bat';
-    return `<tr><td>${i===0?NAMES[team]:''}</td><td>${p.name}${i===0?' ★':''}</td><td>${batText}</td><td>${fmtBowl(bowl)}</td><td>${status}</td></tr>`;
+    return `<tr><td>${i===0?NAMES[team]:''}</td><td>${p.name}${p.captain?' ★':''}</td><td>${batText}</td><td>${fmtBowl(bowl)}</td><td>${status}</td></tr>`;
   }).join('')).join('');
   return [0,1].map(i=>{const bat=(S.batting||{})['side'+i],bowl=(S.figures||{})['side'+i];return `<tr><td>${NAMES[i]}</td><td>${NAMES[i]}</td><td>${bat&&bat.balls?`${bat.runs} (${bat.balls})`:'—'}</td><td>${fmtBowl(bowl)}</td><td>${bat?.out?'Out':'Not out'}</td></tr>`}).join('');
 }
@@ -590,6 +601,7 @@ $('cBat').addEventListener('click',()=>pickFirst('bat'));
 $('cBowl').addEventListener('click',()=>pickFirst('bowl'));
 $('go').addEventListener('click',act);
 $('again').addEventListener('click',again);
+$('endRoom').addEventListener('click',endRoom);
 $('aiT').addEventListener('click',e=>{ai=!ai;e.target.setAttribute('aria-pressed',ai);e.target.textContent='Player 2: '+(ai?'AI':'human');render()});
 $('sndT').addEventListener('click',e=>{snd=!snd;e.target.setAttribute('aria-pressed',snd);e.target.textContent='Sound '+(snd?'on':'off')});
 $('cuffPrev').addEventListener('click',()=>{cuffIndex=(cuffIndex+CUFFS.length-1)%CUFFS.length;renderCuffPicker()});
@@ -636,6 +648,23 @@ function send(m){
   const ref=net.role==='player'||teamMode()?net.room.child('actions').push():net.room.child('guestAction');
   ref.set({...m,id,uid:net.uid}).catch(fail);
 }
+function markPresent(){
+  if(!net.room||!net.uid)return;
+  const presence=net.room.child('presence/'+net.uid);
+  presence.set(true).catch(fail);
+  presence.onDisconnect().remove();
+}
+function roomEnded(){
+  if(net.role==='local'||net.role==='solo')return;
+  modal('Room ended','The host ended this room or disconnected.',[['Back to menu',home]]);
+}
+function endRoom(){
+  if(net.role!=='host'||!net.room)return;
+  modal('End this room?','This ends the match for every player.',[
+    ['End room',()=>{net.room.remove().then(home).catch(fail)}],
+    ['Cancel',()=>unmodal(),true]
+  ]);
+}
 function modal(t,body,btns){
   $('mt').textContent=t;$('mb').innerHTML=body;
   const bx=$('mbt');bx.innerHTML='';
@@ -657,6 +686,7 @@ function askMatchSetup(cb,roomMatch=false){
 }
 function applyRole(){
   const solo=net.role==='solo';
+  $('endRoom').style.display=net.role==='host'?'':'none';
   if(teamMode()){
     const t=localTeam();$('pad0').style.display=t===0?'':'none';$('pad1').style.display=t===1?'':'none';$('pad0').style.order=t===0?4:'';return;
   }
@@ -716,7 +746,7 @@ function showWait(){
 }
 function showLobby(){
   if(!teamMode()||S.mode!=='lobby'){ $('lobbyOv').classList.remove('show');return; }
-  const team=t=>teamPlayers(t).map((p,i)=>`<div style="padding:7px;border-top:1px solid var(--line);color:${t?'var(--p2)':'var(--p1)'}">${i===0?'★ Captain · ':''}${p.name}</div>`).join('')||'<div style="padding:7px">Open slot</div>';
+  const team=t=>teamPlayers(t).map(p=>{const here=(S.connected||{})[p.id];return `<div style="padding:7px;border-top:1px solid var(--line);color:${t?'var(--p2)':'var(--p1)'}">${p.captain?'★ Captain · ':''}${p.name}${here?'':' <small style="color:var(--muted)">· reconnecting…</small>'}</div>`}).join('')||'<div style="padding:7px">Open slot</div>';
   const link=location.href.split('#')[0]+'#'+net.code;
   const invite=net.role==='host'?`<div style="margin:14px 0 8px;padding:10px;background:rgba(0,0,0,.2);border:1px solid var(--line);border-radius:10px"><small style="color:var(--muted);text-transform:uppercase;letter-spacing:.08em">Invite code</small><code style="display:block;font:700 28px var(--head);letter-spacing:6px;color:var(--brass);margin-top:3px">${net.code}</code><div style="font-size:11px;word-break:break-all;margin-top:6px">${link}</div></div>`:'';
   $('lobbyBody').innerHTML=`${invite}<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;text-align:left"><div><b style="color:var(--p1)">Team Blue</b>${team(0)}</div><div><b style="color:var(--p2)">Team Orange</b>${team(1)}</div></div><p style="font-size:12px">Need at least one player on each team. Maximum two players per team.</p>`;
@@ -744,8 +774,8 @@ function receiveGuestAction(m){
   if(!m||!m.id||m.id===net.lastAction)return;
   net.lastAction=m.id;
   if(teamMode()){
-    if(m.t==='join'&&S.mode==='lobby'&&m.uid&&!S.players.some(p=>p.id===m.uid)&&S.players.length<4){S.players.push({id:m.uid,name:m.name||'Player',team:null})}
-    else if(m.t==='team'&&S.mode==='lobby'){const p=S.players.find(x=>x.id===m.uid);if(p&&p.id!==S.players[0].id&&p.team!==m.team&&teamPlayers(m.team).length<2)p.team=m.team}
+    if(m.t==='join'&&S.mode==='lobby'&&m.uid&&!S.players.some(p=>p.id===m.uid)&&S.players.length<4){S.players.push({id:m.uid,name:m.name||'Player',team:null,captain:false})}
+    else if(m.t==='team'&&S.mode==='lobby'){const p=S.players.find(x=>x.id===m.uid);if(p&&p.id!==S.players[0].id&&p.team!==m.team&&teamPlayers(m.team).length<2)moveToTeam(p,m.team)}
     else if(m.t==='pick'&&m.uid===(S.mode==='review'?captainFor(m.team)?.id:activeIdFor(m.team)))lock(m.team,m.n);
     else if(m.t==='review'&&m.uid===activeIdFor(S.reviewing))handleReview(m.decision);
     else if(m.t==='go'&&m.uid===activeIdFor(bowl())&&(S.state==='idle'||S.state==='break')&&Date.now()>=S.noticeUntil){timers.forEach(clearTimeout);timers=[];startBall()}
@@ -772,8 +802,10 @@ async function host(){
       if(!claim.committed)continue;
       net.code=code;net.room=room;net.last='';net.lastAction='';
       room.onDisconnect().remove();
-      S.mode='lobby';S.state='lobby';S.players=[{id:net.uid,name:NAMES[0],team:0}];S.activeBat=null;S.activeBowl=null;NAMES[0]='Team Blue';NAMES[1]='Team Orange';
+      S.mode='lobby';S.state='lobby';S.players=[{id:net.uid,name:NAMES[0],team:0,captain:true}];S.connected={[net.uid]:true};S.activeBat=null;S.activeBowl=null;NAMES[0]='Team Blue';NAMES[1]='Team Orange';
       room.child('actions').on('child_added',s=>receiveGuestAction(s.val()));
+      room.child('presence').on('value',s=>{S.connected=s.val()||{};render();showLobby()});
+      markPresent();
       applyRole();render();showLobby();return;
     }
     throw new Error('Could not reserve a room code. Please try again.');
@@ -784,16 +816,20 @@ async function join(code){
     await ensureAuth();
     const room=fbDb.ref('rooms/'+code),current=(await room.once('value')).val();
     if(!current)throw new Error('No active room found with that code. Ask your friend to create a new room.');
-    if(current.state&&current.state.S&&current.state.S.players&&current.state.S.players.length>=4)throw new Error('That room is full.');
+    const roster=current.state?.S?.players||[],known=roster.some(p=>p.id===fbAuth.currentUser.uid);
+    if(roster.length>=4&&!known)throw new Error('That room is full.');
     net.role='player';net.uid=fbAuth.currentUser.uid;net.code=code;net.room=room;net.wait=false;applyRole();
-    room.child('state').on('value',s=>{const d=s.val();if(d)apply(d)});
+    let sawState=!!current.state;
+    room.child('state').on('value',s=>{const d=s.val();if(d){sawState=true;apply(d)}else if(sawState)roomEnded()});
+    markPresent();
+    if(known)return;
     askName(1,()=>{unmodal();send({t:'join',name:NAMES[1]})});
   }catch(e){fail(e)}
 }
 function snap(){
   const g=id=>$(id).innerHTML;
   const fx=p=>({text:$('fx'+p).textContent,cls:$('fx'+p).className});
-  return {S:{inn:S.inn,score:S.score,target:S.target,state:S.state,mode:S.mode,first:S.first,tw:S.tw,bk:S.bk,pick:S.pick,balls:S.balls,runs:S.runs,wickets:S.wickets,reviews:S.reviews,maxOvers:S.maxOvers,maxWickets:S.maxWickets,reviewing:S.reviewing,reviewId:S.reviewId,pendingOut:S.pendingOut,reviewDeadline:S.reviewDeadline,noticeId:S.noticeId,noticeTitle:S.noticeTitle,noticeDetail:S.noticeDetail,noticeUntil:S.noticeUntil,resultPhase:S.resultPhase,resultTitle:S.resultTitle,resultDetail:S.resultDetail,players:S.players,activeBat:S.activeBat,activeBowl:S.activeBowl,figures:S.figures,batting:S.batting,intro:S.intro,tossStarted:S.tossStarted,cuffs:S.cuffs,themeReady:S.themeReady,themePrompt:S.themePrompt},names:NAMES,guestReady:true,count:$('count').textContent,h0:g('h0'),h1:g('h1'),n0:$('n0').textContent,n1:$('n1').textContent,fx:[fx(0),fx(1)],log:g('log'),tossShow:$('tossOv').classList.contains('show'),ovShow:$('ov').classList.contains('show'),wt:$('wt').textContent,ws:$('ws').textContent,tb:g('tb')};
+  return {S:{inn:S.inn,score:S.score,target:S.target,state:S.state,mode:S.mode,first:S.first,tw:S.tw,bk:S.bk,pick:S.pick,balls:S.balls,runs:S.runs,wickets:S.wickets,reviews:S.reviews,maxOvers:S.maxOvers,maxWickets:S.maxWickets,reviewing:S.reviewing,reviewId:S.reviewId,pendingOut:S.pendingOut,reviewDeadline:S.reviewDeadline,noticeId:S.noticeId,noticeTitle:S.noticeTitle,noticeDetail:S.noticeDetail,noticeUntil:S.noticeUntil,resultPhase:S.resultPhase,resultTitle:S.resultTitle,resultDetail:S.resultDetail,players:S.players,connected:S.connected,activeBat:S.activeBat,activeBowl:S.activeBowl,figures:S.figures,batting:S.batting,intro:S.intro,tossStarted:S.tossStarted,cuffs:S.cuffs,themeReady:S.themeReady,themePrompt:S.themePrompt},names:NAMES,guestReady:true,count:$('count').textContent,h0:g('h0'),h1:g('h1'),n0:$('n0').textContent,n1:$('n1').textContent,fx:[fx(0),fx(1)],log:g('log'),tossShow:$('tossOv').classList.contains('show'),ovShow:$('ov').classList.contains('show'),wt:$('wt').textContent,ws:$('ws').textContent,tb:g('tb')};
 }
 setInterval(()=>{
   if(net.role!=='host'||!net.room)return;
