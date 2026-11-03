@@ -162,7 +162,7 @@ const $=id=>document.getElementById(id);
 const NAMES=['Player 1','Player 2'];
 const SKIN=['#f0cfa8','#c99b78'];
 let S;
-let ai=false,snd=true,timers=[],noticeTimer=0;
+let ai=false,snd=true,timers=[],noticeTimer=0,keysRps=null;
 
 function shade(h,v){const n=parseInt(h.slice(1),16),c=k=>Math.max(0,Math.min(255,((n>>k)&255)+v));return `rgb(${c(16)},${c(8)},${c(0)})`}
 function hand(n,skin,cuff='#15191f'){
@@ -231,6 +231,8 @@ function addBowlerFigure(runs=0,wicket=false){S.figures||={};const k=bowlerKey()
 function addBatting(runs=0,out=false){S.batting||={};const k=batterKey(),s=S.batting[k]||(S.batting[k]={runs:0,balls:0,out:false});s.runs+=runs;s.balls++;if(out)s.out=true}
 
 function render(){
+  // Self-heal: the key layout must always match the phase (toss/review = RPS, game = 0-6) on every device.
+  if(keysRps!==(S.mode==='toss'||S.mode==='review'))buildKeys();
   const T=S.mode==='toss',b=bat(),wk=S.wickets[b],left=Math.max(S.maxWickets-wk,0);
   $('sInn').textContent=T?'Toss':'#'+S.inn;
   $('sBat').textContent=T?'Rock paper scissors':playerLabel(b);
@@ -249,7 +251,7 @@ function render(){
   const lab=teamMode()&&!T&&S.mode!=='lobby'&&!canControlSide(bowl())?'Waiting for the bowler':normalLab;
   $('go').textContent=lab;
   const lobbyReady=S.mode==='lobby'&&teamPlayers(0).length>0&&teamPlayers(1).length>0;
-  $('go').disabled=(S.mode==='lobby'?!lobbyReady||net.role!=='host':S.state==='pick'||S.state==='strategy'||S.state==='over'||S.state==='choose'||S.state==='intro'||S.state==='reviewOffer'||Date.now()<S.noticeUntil||!canControlSide(bowl()));
+  $('go').disabled=(S.mode==='lobby'?!lobbyReady||net.role!=='host':S.state==='pick'||S.state==='strategy'||S.state==='over'||S.state==='choose'||S.state==='intro'||S.state==='reviewOffer'||now()<S.noticeUntil||!canControlSide(bowl()));
   document.querySelectorAll('.keys button').forEach(x=>x.disabled=S.state!=='pick'||(ai&&x.dataset.p==='1')||!canControlSide(+x.dataset.p));
 }
 function showHands(a,b,anim,cls){
@@ -503,7 +505,7 @@ function maybePromptStrategy(){
   const opening=q.phase==='openingWinner'||q.phase==='openingOpponent';
   const title=q.role==='bat'?(opening?'Choose opening batter':'Choose next batter'):(opening?'Choose opening bowler':'Choose next bowler');
   const buttons=q.options.map(id=>{const p=S.players.find(x=>x.id===id);return [p.name,()=>{unmodal();answerStrategy(id)}]});
-  modal(title,'Captain’s call.',buttons);
+  modal(title,'Captain’s call. If nobody picks within 20 seconds, the first option is chosen automatically.',buttons);
 }
 function answerStrategy(id){
   // Close only this captain prompt. The versioned state broadcast below tells
@@ -585,7 +587,7 @@ function choose(c){
   $('tossOv').classList.remove('show');
   S.first=c==='bat'?S.tw:1-S.tw;S.mode='game';S.state='idle';
   if(teamMode()){
-    S.tossChoice=c;S.activeBat=null;S.activeBowl=null;S.state='decisionNotice';
+    S.tossChoice=c;S.activeBat=null;S.activeBowl=null;S.state='decisionNotice';buildKeys();
     announce(`${NAMES[S.tw]} decided to ${c} first`,`${NAMES[S.first]} will bat first.`,2000);
     render();publishState();
     timers.push(setTimeout(()=>{
@@ -650,20 +652,20 @@ function announce(title,detail,duration){
   timers.push(setTimeout(()=>{if(Date.now()>=S.noticeUntil)showMatchNotice()},duration+30));
 }
 function showMatchNotice(){
-  const active=Date.now()<S.noticeUntil;
+  const active=now()<S.noticeUntil;
   const untilStart=Number(S.matchStartAt)||0;
-  const secondsLeft=untilStart>Date.now()?Math.ceil((untilStart-Date.now())/1000):0;
+  const secondsLeft=untilStart>now()?Math.ceil((untilStart-now())/1000):0;
   $('matchTitle').textContent=secondsLeft?`Match starts in ${secondsLeft}`:(S.noticeTitle||'');
   $('matchDetail').textContent=S.noticeDetail||'';
   $('matchOv').classList.toggle('show',active);
   clearTimeout(noticeTimer);
-  if(active)noticeTimer=setTimeout(showMatchNotice,secondsLeft?Math.min(250,Math.max(40,untilStart-Date.now()+20)):Math.max(40,S.noticeUntil-Date.now()+20));
+  if(active)noticeTimer=setTimeout(showMatchNotice,secondsLeft?Math.min(250,Math.max(40,untilStart-now()+20)):Math.max(40,S.noticeUntil-now()+20));
   else render(); // Re-enable “Bowl first ball” once the shared notice has closed.
 }
 
 // controls
 function buildKeys(){
-  const T=S.mode==='toss'||S.mode==='review',L=['Rock','Paper','Scissors'],E=['✊','✋','✌️'];
+  const T=S.mode==='toss'||S.mode==='review',L=['Rock','Paper','Scissors'],E=['✊','✋','✌️'];keysRps=T;
   [0,1].forEach(p=>{
     const k=$('k'+p);k.innerHTML='';k.className='keys'+(T?' t3':'');
     for(let i=0;i<(T?3:7);i++){
@@ -719,6 +721,8 @@ let authPromise=null;
 const net={role:'local',code:'',room:null,uid:'',wait:false,last:'',lastAction:'',seenReview:-1,seenStrategy:'',strategyModal:'',appliedRevision:-1};
 const online=()=>net.role==='host'||net.role==='guest'||net.role==='player',me=()=>net.role==='guest'?1:0;
 const home=()=>location.replace(location.pathname+location.search);
+// Host and players have different clocks, so every shared deadline is read through the host's clock.
+const now=()=>Date.now()+(net.skew||0);
 function ensureAuth(){
   if(fbAuth.currentUser)return Promise.resolve(fbAuth.currentUser);
   if(!authPromise)authPromise=fbAuth.signInAnonymously().then(r=>r.user).catch(e=>{authPromise=null;throw e});
@@ -788,7 +792,7 @@ function press(p,n){
   if(p===1||net.role==='player')send({t:'pick',n,team:p});else lock(0,n);
 }
 function act(){
-  if(Date.now()<S.noticeUntil)return;
+  if(now()<S.noticeUntil)return;
   if(S.mode==='lobby'){if(net.role==='host')startTeamMatch();return}
   if(teamMode()&&!canControlSide(bowl()))return;
   if(net.role==='guest'||net.role==='player'){send({t:'go'});return}
@@ -906,7 +910,7 @@ async function join(code){
     let sawState=!!current.state;
     room.child('state').on('value',s=>{const d=s.val();if(d){sawState=true;apply(d)}else if(sawState)roomEnded()});
     markPresent();
-    if(known)return;
+    if(known){unmodal();return}
     askName(1,()=>{unmodal();send({t:'join',name:NAMES[1]})});
   }catch(e){fail(e)}
 }
@@ -917,24 +921,35 @@ function snap(){
 }
 function publishState(){
   if(net.role!=='host'||!net.room)return;
-  S.syncRevision=(Number(S.syncRevision)||0)+1;
-  const d=snap();net.last=JSON.stringify(d);
-  net.room.child('state').set(d).catch(fail);
+  try{
+    S.syncRevision=(Number(S.syncRevision)||0)+1;
+    const d=snap();net.last=JSON.stringify(d);
+    // JSON round-trip strips undefined values, which would make Firebase throw and stall the game.
+    const out=JSON.parse(net.last);out.hostNow=Date.now();
+    net.lastPub=Date.now();
+    net.room.child('state').set(out).catch(fail);
+  }catch(e){console.error('publish failed',e)}
 }
 setInterval(()=>{
   if(net.role!=='host'||!net.room)return;
   const d=snap(),j=JSON.stringify(d);
-  if(j!==net.last)publishState()
+  if(j!==net.last||Date.now()-(net.lastPub||0)>2000)publishState() // heartbeat heals any missed update
 },150);
 function apply(d){
   const incoming=Number(d.S.syncRevision)||0;
   // Firebase normally delivers writes in order, but a reconnect can replay an
   // older cached value. Never let it reopen a completed captain decision.
-  if(net.role!=='host'&&incoming<net.appliedRevision)return;
-  net.appliedRevision=Math.max(net.appliedRevision,incoming);
+  const stamp=Number(d.hostNow)||0;
+  if(net.role!=='host'&&stamp&&stamp<(net.appliedStamp||0))return;
+  net.appliedStamp=Math.max(net.appliedStamp||0,stamp);
+  if(stamp)net.skew=stamp-Date.now();
   const mc=d.S.mode!==S.mode,nb=d.S.bk!==S.bk;
   const changedStrategy=d.S.strategyId!==S.strategyId;
   Object.assign(S,d.S);
+  // Firebase drops null/empty values, so a missing key means "cleared". Without this,
+  // old values (strategy, pendingOut, activeBat...) survive on players' devices.
+  const NUL={target:null,reviewing:null,pendingOut:null,strategy:null,activeBat:null,activeBowl:null,players:null,tossChoice:'',noticeTitle:'',noticeDetail:'',resultTitle:'',resultDetail:'',strategyId:'',matchStartAt:0,noticeUntil:0,reviewDeadline:0,intro:0,connected:{},figures:{},batting:{},pick:[null,null]};
+  Object.keys(NUL).forEach(k=>{if(d.S[k]===undefined)S[k]=NUL[k]});
   if(S.state!=='strategy')$('strategyOv').classList.remove('show');
   if(changedStrategy&&net.strategyModal){unmodal();net.strategyModal=''}
   if(S.state!=='reviewOffer'&&$('mt').textContent==='You are out — take a review?')unmodal();
@@ -971,6 +986,32 @@ function apply(d){
   showResults();
   $('wt').textContent=d.wt;$('ws').textContent=d.ws;$('tb').innerHTML=d.tb;
 }
+// Players: re-derive blocking overlays from the latest state twice a second so none can stay stuck.
+setInterval(()=>{
+  if(net.role!=='player'&&net.role!=='guest')return;
+  if(S.state!=='strategy')$('strategyOv').classList.remove('show');
+  showStrategyStatus();showReviewStatus();showMatchNotice();
+  if(S.mode!=='toss'&&$('tossOv').classList.contains('show'))$('tossOv').classList.remove('show');
+  if(!$('mbt').children.length&&$('mo').classList.contains('show')&&S.mode!=='lobby'&&!S.themePrompt)unmodal();
+},500);
+// Host: no phase may last forever. If a captain or player goes quiet, the match moves on.
+let wd={k:'',t:Date.now()};
+setInterval(()=>{
+  if(net.role!=='host'||S.mode==='lobby')return;
+  const k=[S.state,S.mode,S.strategyId,S.bk,S.reviewId,S.inn,S.tossChoice].join('|');
+  if(k!==wd.k){wd={k,t:Date.now()};return}
+  const lim={choose:25000,decisionNotice:5000,strategy:20000,countdown:8000,reviewOffer:6000,idle:7000,break:12000,intro:6000}[S.state];
+  if(!lim||Date.now()-wd.t<lim)return;
+  wd.t=Date.now();const q=S.strategy;
+  if(S.state==='choose'&&S.mode==='toss'){tossView(false,'');choose(Math.random()<.5?'bat':'bowl')}
+  else if(S.state==='decisionNotice')beginOpeningStrategy();
+  else if(S.state==='strategy'&&q)selectStrategy(q.options[0]);
+  else if(S.state==='countdown'){S.matchStartAt=0;S.state='idle';S.noticeUntil=0;showMatchNotice();startBall()}
+  else if(S.state==='reviewOffer')handleReview('decline');
+  else if(S.state==='intro'){S.intro=0;showTossIntro(0);S.state='idle';startBall()}
+  else if((S.state==='idle'||S.state==='break')&&S.mode==='game'){timers.forEach(clearTimeout);timers=[];startBall()}
+  publishState();
+},1000);
 reset();
 const hs=location.hash.slice(1);
 if(/^[A-Za-z0-9]{6}$/.test(hs)){modal('Joining room','Connecting to the match…',[]);join(hs.toUpperCase())}else menu();
