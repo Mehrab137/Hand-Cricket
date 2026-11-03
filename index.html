@@ -90,6 +90,7 @@ h1 span{color:var(--leather)}
 .winner-card h2{font-size:clamp(32px,9vw,52px);color:var(--brass)}.winner-card p{margin:0;color:#cbd7df}.review-clock{font:700 15px var(--body);color:var(--brass);margin-top:10px}
 .cuff-name{font:700 18px var(--body);color:var(--bone);min-height:26px}.cuff-nav{display:flex;gap:8px;margin-top:14px}.cuff-nav .go{width:50%;padding:10px}.cuff-skip{font:600 13px var(--body);background:none;border:0;color:var(--muted);cursor:pointer;padding:12px;text-decoration:underline}
 .slots{display:grid;grid-template-columns:1fr 1fr;gap:10px;text-align:center}.slot{background:rgba(0,0,0,.22);border:1px solid var(--line);border-radius:12px;padding:10px;min-width:0}.slot small{display:block;color:var(--muted);letter-spacing:.1em;font-size:10px}.slot b{display:block;margin:2px 0 4px;font-size:16px}.slot .hand{width:64px;margin:4px auto}.lp{padding:5px 0;border-top:1px solid var(--line);font-size:14px;color:var(--bone)}.swatches{display:flex;flex-wrap:wrap;gap:8px;margin-top:6px}.swatches button{width:34px;height:34px;border-radius:50%;border:3px solid transparent;cursor:pointer;background:var(--cc)}.swatches button.on{border-color:var(--bone)}.swatches button:disabled{opacity:.25;cursor:not-allowed}
+.card tr.sp td{padding:10px;border:0}
 </style>
 </head>
 <body>
@@ -138,7 +139,7 @@ h1 span{color:var(--leather)}
 <div class="ov" id="tossOv"><div class="card" role="dialog" aria-modal="true" aria-labelledby="tossT"><h2 id="tossT"></h2><div style="color:var(--muted);margin-bottom:16px" id="tossSub">Choose how to start the match.</div><div style="display:flex;gap:10px" id="tossBtns"><button class="go" id="cBat">Bat first</button><button class="go" id="cBowl">Bowl first</button></div></div></div>
 <div class="ov" id="ov"><div class="card" role="dialog" aria-modal="true" aria-labelledby="wt">
  <h2 id="wt"></h2><div id="ws" style="color:var(--muted)"></div>
- <table><thead><tr><th>Team</th><th>Player</th><th>Bat</th><th>Bowl</th><th>Status</th></tr></thead><tbody id="tb"></tbody></table>
+ <table><thead><tr><th>Team</th><th>Player</th><th>Bat</th><th>Bowl</th></tr></thead><tbody id="tb"></tbody></table>
  <button class="go" id="again">Play again</button>
 </div></div>
 
@@ -213,6 +214,8 @@ const localTeam=()=>teamMode()?(localPlayer()?.team??-1):me();
 const activeIdFor=t=>t===bat()?S.activeBat:S.activeBowl;
 const playerLabel=t=>{const p=teamMode()?S.players.find(x=>x.id===activeIdFor(t)):null;return p?p.name:NAMES[t]};
 const canControlSide=t=>teamMode()?(S.mode==='review'?captainFor(t)?.id===net.uid:activeIdFor(t)===net.uid):(!online()||me()===t);
+// Team name shown in results: always the colour the captain picked in the lobby (e.g. Team Green).
+const teamLabel=t=>{if(teamMode()&&S.cuffSet&&S.cuffSet[t]){const c=CUFFS.find(x=>x.color===S.cuffs[t]);if(c)return 'Team '+c.name}return NAMES[t]};
 const captainFor=t=>teamPlayers(t).find(p=>p.captain)||teamPlayers(t)[0];
 function moveToTeam(player,team){
   const oldTeam=player.team;
@@ -516,7 +519,8 @@ function showReviewStatus(){
 }
 function beginStrategy(phase,team,role){
   const roster=teamPlayers(team),current=role==='bat'?S.activeBat:S.activeBowl;
-  const options=phase==='nextBowler'?roster.filter(p=>p.id!==current):roster;
+  let options=phase==='nextBowler'?roster.filter(p=>p.id!==current):phase==='nextBatter'?roster.filter(p=>!(S.batting&&S.batting[p.id]&&S.batting[p.id].out)):roster;
+  if(!options.length)options=roster;
   // This token must never be reused: each device uses it to discard an old
   // strategy screen when a newer captain decision arrives.
   S.strategyId=`${Date.now()}-${Math.random().toString(36).slice(2,8)}`;
@@ -642,9 +646,13 @@ function endInnings(){
     S.state='over';
     const r0=S.runs[0],r1=S.runs[1];
     let t,s;const w=r0>r1?0:1,d=Math.abs(r0-r1);
-    if(r0===r1){t='It’s a tie!';s='Both sides scored '+r0+'.';S.resultTitle=t;S.resultDetail=s}
-    else if(w!==S.first){t=NAMES[w]+' wins!';s=`Chased down ${S.target} in ${S.balls[w]} balls.`;S.resultTitle=t;S.resultDetail=`Won by ${Math.max(S.maxWickets-S.wickets[w],0)} wicket${Math.max(S.maxWickets-S.wickets[w],0)===1?'':'s'}.`}
-    else{t=NAMES[w]+' wins!';s=`${NAMES[1-w]} finished ${d} run${d>1?'s':''} behind.`;S.resultTitle=t;S.resultDetail=`Won by ${d} run${d===1?'':'s'}.`}
+    if(r0===r1){t='It’s a tie!';s='Both sides scored '+r0+'.'}
+    else{
+      const wl=Math.max(S.maxWickets-S.wickets[w],0);
+      t=`${teamLabel(w)} won the match!`;
+      s=w!==S.first?`by ${wl} wicket${wl===1?'':'s'}`:`by ${d} run${d===1?'':'s'}`;
+    }
+    S.resultTitle=t;S.resultDetail=s;
     $('wt').textContent=t;$('ws').textContent=s;
     $('tb').innerHTML=scorecardRows();
     S.resultPhase=1;showResults();
@@ -658,10 +666,9 @@ function scorecardRows(){
   if(teamMode())return [0,1].map(team=>teamPlayers(team).map((p,i)=>{
     const bat=(S.batting||{})[p.id],bowl=(S.figures||{})[p.id];
     const batText=bat&&bat.balls?`${bat.runs} (${bat.balls})`:'—';
-    const status=bat?(bat.out?'Out':'Not out'):'Did not bat';
-    return `<tr><td>${i===0?NAMES[team]:''}</td><td>${p.name}${p.captain?' ★':''}</td><td>${batText}</td><td>${fmtBowl(bowl)}</td><td>${status}</td></tr>`;
-  }).join('')).join('');
-  return [0,1].map(i=>{const bat=(S.batting||{})['side'+i],bowl=(S.figures||{})['side'+i];return `<tr><td>${NAMES[i]}</td><td>${NAMES[i]}</td><td>${bat&&bat.balls?`${bat.runs} (${bat.balls})`:'—'}</td><td>${fmtBowl(bowl)}</td><td>${bat?.out?'Out':'Not out'}</td></tr>`}).join('');
+    return `<tr><td>${i===0?teamLabel(team):''}</td><td>${p.name}${p.captain?' ★':''}</td><td>${batText}</td><td>${fmtBowl(bowl)}</td></tr>`;
+  }).join('')).join('<tr class="sp"><td colspan="4"></td></tr>');
+  return [0,1].map(i=>{const bat=(S.batting||{})['side'+i],bowl=(S.figures||{})['side'+i];return `<tr><td>${NAMES[i]}</td><td>${NAMES[i]}</td><td>${bat&&bat.balls?`${bat.runs} (${bat.balls})`:'—'}</td><td>${fmtBowl(bowl)}</td></tr>`}).join('');
 }
 
 function showResults(){
@@ -861,6 +868,7 @@ function showWait(){
 function lobbyStatus(){
   const ps=S.players||[];
   if(!(teamPlayers(0).length&&teamPlayers(1).length))return{ok:false,msg:'Waiting for both sides'};
+  for(const t of [0,1])if(!(S.cuffSet&&S.cuffSet[t]))return{ok:false,msg:`Waiting for the ${t?'right':'left'} captain to pick a colour`};
   const un=ps.filter(p=>p.team==null).length;
   if(un)return{ok:false,msg:`Waiting for ${un} to pick a side`};
   const nr=ps.filter(p=>!p.ready).length;
