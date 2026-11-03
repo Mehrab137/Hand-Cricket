@@ -527,7 +527,10 @@ function selectStrategy(id){
 }
 function showStrategyStatus(){
   const ov=$('strategyOv'),q=S.strategy;
-  if(!q){ov.classList.remove('show');return}
+  // This is a blocking overlay. It must disappear the instant the shared
+  // game moves on, even if an older strategy object is briefly retained by a
+  // delayed Firebase update.
+  if(!q||S.state!=='strategy'){ov.classList.remove('show');return}
   if(captainFor(q.team)?.id===net.uid){ov.classList.remove('show');return}
   const captain=captainFor(q.team)?.name||NAMES[q.team];
   const isBatter=q.role==='bat';
@@ -932,6 +935,7 @@ function apply(d){
   const mc=d.S.mode!==S.mode,nb=d.S.bk!==S.bk;
   const changedStrategy=d.S.strategyId!==S.strategyId;
   Object.assign(S,d.S);
+  if(S.state!=='strategy')$('strategyOv').classList.remove('show');
   if(changedStrategy&&net.strategyModal){unmodal();net.strategyModal=''}
   if(S.state!=='reviewOffer'&&$('mt').textContent==='You are out — take a review?')unmodal();
   d.names.forEach((n,i)=>{NAMES[i]=n;$('nm'+i).textContent=n});
