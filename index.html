@@ -397,7 +397,7 @@ function reveal(){
   finishBall();
 }
 function finishBall(){
-  const b=bat(),chased=S.inn===2&&S.score>S.target,allOut=S.wickets[b]>=S.maxWickets,oversDone=S.balls[b]>=S.maxOvers*6;
+  const b=bat(),chased=S.inn===2&&S.score>=S.target,allOut=S.wickets[b]>=S.maxWickets,oversDone=S.balls[b]>=S.maxOvers*6;
   if(chased||allOut||oversDone){S.state='over';render();showReviewStatus();timers.push(setTimeout(()=>endInnings(),1800))}
   else{
     if(teamMode()&&S.balls[b]>0&&S.balls[b]%6===0&&teamPlayers(bowl()).length>1){beginStrategy('nextBowler',bowl(),'bowl');return}
