@@ -569,7 +569,9 @@ function buildKeys(){
   $('hint0').textContent=T?'Keys: 1 rock, 2 paper, 3 scissors':'Keys: 0–6 on the number row';
   $('hint1').textContent=T?'Keys: numpad 1–3, or A rock, S paper, D scissors':'Keys: numpad 0–6, or A S D F G H J';
 }
-const pickFirst=c=>online()&&!canChooseToss()?send({t:'choose',c}):choose(c);
+// The host owns the shared state. A winning captain on another device sends
+// their decision to the host; only the host applies it for everyone.
+const pickFirst=c=>online()&&net.role!=='host'?send({t:'choose',c}):choose(c);
 $('cBat').addEventListener('click',()=>pickFirst('bat'));
 $('cBowl').addEventListener('click',()=>pickFirst('bowl'));
 $('go').addEventListener('click',act);
