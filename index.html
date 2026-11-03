@@ -89,6 +89,7 @@ h1 span{color:var(--leather)}
 .cuff-preview{width:136px;height:30px;margin:18px auto;border-radius:8px;background:var(--cuff);border:2px solid rgba(255,255,255,.25);box-shadow:inset 0 4px 8px rgba(255,255,255,.2),0 7px 13px rgba(0,0,0,.25)}
 .winner-card h2{font-size:clamp(32px,9vw,52px);color:var(--brass)}.winner-card p{margin:0;color:#cbd7df}.review-clock{font:700 15px var(--body);color:var(--brass);margin-top:10px}
 .cuff-name{font:700 18px var(--body);color:var(--bone);min-height:26px}.cuff-nav{display:flex;gap:8px;margin-top:14px}.cuff-nav .go{width:50%;padding:10px}.cuff-skip{font:600 13px var(--body);background:none;border:0;color:var(--muted);cursor:pointer;padding:12px;text-decoration:underline}
+.slots{display:grid;grid-template-columns:1fr 1fr;gap:10px;text-align:center}.slot{background:rgba(0,0,0,.22);border:1px solid var(--line);border-radius:12px;padding:10px;min-width:0}.slot small{display:block;color:var(--muted);letter-spacing:.1em;font-size:10px}.slot b{display:block;margin:2px 0 4px;font-size:16px}.slot .hand{width:64px;margin:4px auto}.lp{padding:5px 0;border-top:1px solid var(--line);font-size:14px;color:var(--bone)}.swatches{display:flex;flex-wrap:wrap;gap:8px;margin-top:6px}.swatches button{width:34px;height:34px;border-radius:50%;border:3px solid transparent;cursor:pointer;background:var(--cc)}.swatches button.on{border-color:var(--bone)}.swatches button:disabled{opacity:.25;cursor:not-allowed}
 </style>
 </head>
 <body>
@@ -195,9 +196,9 @@ function hand(n,skin,cuff='#15191f'){
 
 function reset(){
   timers.forEach(clearTimeout);timers=[];
-  const oldCuffs=S&&S.cuffs?S.cuffs:['#15191f','#15191f'];
+  const oldCuffs=S&&S.cuffs?S.cuffs:['#15191f','#15191f'],oldSet=S&&S.cuffSet?S.cuffSet:[false,false];
   const oldOvers=S&&S.maxOvers||1,oldWickets=S&&S.maxWickets||1;
-  S={inn:1,score:0,target:null,state:'idle',mode:'toss',first:0,tw:0,tossChoice:'',matchStartAt:0,bk:0,pick:[null,null],balls:[0,0],runs:[0,0],wickets:[0,0],reviews:[1,1],maxOvers:oldOvers,maxWickets:oldWickets,reviewing:null,reviewId:0,pendingOut:null,reviewDeadline:0,noticeId:0,noticeTitle:'',noticeDetail:'',noticeUntil:0,resultPhase:0,resultTitle:'',resultDetail:'',players:null,connected:{},activeBat:null,activeBowl:null,figures:{},batting:{},strategy:null,strategyId:'',syncRevision:0,log:[],intro:0,tossStarted:false,cuffs:oldCuffs,themeReady:[true,true],themePrompt:false};
+  S={inn:1,score:0,target:null,state:'idle',mode:'toss',first:0,tw:0,tossChoice:'',matchStartAt:0,bk:0,pick:[null,null],balls:[0,0],runs:[0,0],wickets:[0,0],reviews:[1,1],maxOvers:oldOvers,maxWickets:oldWickets,reviewing:null,reviewId:0,pendingOut:null,reviewDeadline:0,noticeId:0,noticeTitle:'',noticeDetail:'',noticeUntil:0,resultPhase:0,resultTitle:'',resultDetail:'',players:null,connected:{},activeBat:null,activeBowl:null,figures:{},batting:{},strategy:null,strategyId:'',syncRevision:0,log:[],intro:0,tossStarted:false,cuffs:oldCuffs,cuffSet:oldSet,themeReady:[true,true],themePrompt:false};
   $('ov').classList.remove('show');$('winOv').classList.remove('show');$('matchOv').classList.remove('show');$('reviewOv').classList.remove('show');$('strategyOv').classList.remove('show');$('tossOv').classList.remove('show');showTossIntro(0);clearImpacts();buildKeys();
   $('log').innerHTML='<p class="t">Play rock paper scissors to decide the toss. Picks stay hidden until the reveal.</p>';
   $('count').textContent='Ready';
@@ -216,6 +217,7 @@ const captainFor=t=>teamPlayers(t).find(p=>p.captain)||teamPlayers(t)[0];
 function moveToTeam(player,team){
   const oldTeam=player.team;
   player.team=team;
+  if(oldTeam!=null&&oldTeam!==team&&!teamPlayers(oldTeam).length)resetTeamLook(oldTeam);
   if(oldTeam!=null){
     const oldRoster=teamPlayers(oldTeam);
     if(oldRoster.length&&!oldRoster.some(p=>p.captain))oldRoster[0].captain=true;
@@ -802,7 +804,7 @@ function again(){
   if(online()&&net.role!=='host')return;
   if(teamMode()){
     const roster=S.players.map(p=>({...p}));reset();
-    NAMES[0]='Team Blue';NAMES[1]='Team Orange';$('nm0').textContent=NAMES[0];$('nm1').textContent=NAMES[1];
+    $('nm0').textContent=NAMES[0];$('nm1').textContent=NAMES[1];
     S.players=roster;S.mode='lobby';S.state='lobby';S.activeBat=null;S.activeBowl=null;
     render();showLobby();return;
   }
@@ -831,21 +833,41 @@ function showWait(){
   const status=net.guestConnected?'Player 2 is choosing a name…':'Waiting for Player 2 to join…';
   modal('Invite Player 2',`Share this code or link.<code>${net.code}</code><div style="font-size:12px;word-break:break-all">${link}</div><p>${status}</p>`,[['Copy link',e=>{try{navigator.clipboard.writeText(link);e.target.textContent='Copied'}catch(x){}}]]);
 }
+function resetTeamLook(t){S.cuffs[t]='#15191f';S.cuffSet=S.cuffSet||[false,false];S.cuffSet[t]=false;NAMES[t]=t?'Right Team':'Left Team';$('nm'+t).textContent=NAMES[t]}
+// The captain's cuff colour names the team (green cuff = Team Green). Two teams can't share a colour.
+function setTeamLook(t,i){
+  const c=CUFFS[i];if(!c)return;
+  const set=S.cuffSet||[false,false];
+  if(set[1-t]&&S.cuffs[1-t]===c.color)return;
+  S.cuffs[t]=c.color;S.cuffSet=[set[0],set[1]];S.cuffSet[t]=true;
+  NAMES[t]='Team '+c.name;$('nm'+t).textContent=NAMES[t];
+  showHands(0,0,false);render();
+}
 function showLobby(){
-  if(!teamMode()||S.mode!=='lobby'){ $('lobbyOv').classList.remove('show');return; }
-  const team=t=>teamPlayers(t).map(p=>{const here=(S.connected||{})[p.id];return `<div style="padding:7px;border-top:1px solid var(--line);color:${t?'var(--p2)':'var(--p1)'}">${p.captain?'★ Captain · ':''}${p.name}${here?'':' <small style="color:var(--muted)">· reconnecting…</small>'}</div>`}).join('')||'<div style="padding:7px">Open slot</div>';
+  if(!teamMode()||S.mode!=='lobby'){$('lobbyOv').classList.remove('show');net.lobbySig='';return}
+  const set=S.cuffSet||[false,false],mine=localPlayer();
+  const ink=t=>set[t]?S.cuffs[t]:'var(--bone)';
+  const slot=t=>{
+    const ps=teamPlayers(t).map(p=>`<div class="lp">${p.captain?'★ ':''}${p.name}${p.captain?' <small style="display:inline;letter-spacing:0">captain</small>':''}${(S.connected||{})[p.id]?'':' <small style="display:inline;letter-spacing:0">· reconnecting…</small>'}</div>`).join('')||'<div class="lp" style="color:var(--muted)">Open slot</div>';
+    return `<div class="slot"><small>${t?'RIGHT SIDE':'LEFT SIDE'}</small><b style="color:${ink(t)}">${NAMES[t]}</b>${hand(0,SKIN[t],S.cuffs[t])}${ps}</div>`;
+  };
+  const pool=S.players.filter(p=>p.team==null).map(p=>p.name+((S.connected||{})[p.id]?'':' …')).join(', ')||'nobody';
   const link=location.href.split('#')[0]+'#'+net.code;
-  const invite=net.role==='host'?`<div style="margin:14px 0 8px;padding:10px;background:rgba(0,0,0,.2);border:1px solid var(--line);border-radius:10px"><small style="color:var(--muted);text-transform:uppercase;letter-spacing:.08em">Invite code</small><code style="display:block;font:700 28px var(--head);letter-spacing:6px;color:var(--brass);margin-top:3px">${net.code}</code><div style="font-size:11px;word-break:break-all;margin-top:6px">${link}</div></div>`:'';
-  $('lobbyBody').innerHTML=`${invite}<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;text-align:left"><div><b style="color:var(--p1)">Team Blue</b>${team(0)}</div><div><b style="color:var(--p2)">Team Orange</b>${team(1)}</div></div><p style="font-size:12px">Need at least one player on each team. Maximum two players per team.</p>`;
-  const bx=$('lobbyButtons');bx.innerHTML='';const mine=localPlayer();
-  const add=(label,fn,sec)=>{const b=document.createElement('button');b.className='go'+(sec?' sec':'');b.textContent=label;b.onclick=fn;bx.appendChild(b)};
-  const chooseTeam=t=>{if(net.role==='host'){if(mine.team!==t)moveToTeam(mine,t);render();showLobby()}else send({t:'team',team:t})};
-  if(mine){
-    if(mine.team!==0&&teamPlayers(0).length<2)add(mine.team==null?'Join Team Blue':'Switch to Team Blue',()=>chooseTeam(0));
-    if(mine.team!==1&&teamPlayers(1).length<2)add(mine.team==null?'Join Team Orange':'Switch to Team Orange',()=>chooseTeam(1));
-  }
-  if(net.role==='host'){const ready=teamPlayers(0).length&&teamPlayers(1).length;add('Copy invite link',()=>navigator.clipboard?.writeText(link).then(()=>showLobby()).catch(()=>{}),true);add(ready?'Start team match':'Waiting for both teams',startTeamMatch,!ready);}
+  const invite=net.role==='host'?`<div style="margin:0 0 12px;padding:10px;background:rgba(0,0,0,.2);border:1px solid var(--line);border-radius:10px"><small style="color:var(--muted);text-transform:uppercase;letter-spacing:.08em">Invite code</small><code style="display:block;font:700 28px var(--head);letter-spacing:6px;color:var(--brass);margin-top:3px">${net.code}</code><div style="font-size:11px;word-break:break-all;margin-top:6px">${link}</div></div>`:'';
+  const cap=mine&&mine.captain&&mine.team!=null?mine.team:-1;
+  const swatches=cap<0?'':`<div style="margin-top:12px;text-align:left"><small style="color:var(--muted)">You are captain. Pick your team’s cuff colour — it becomes the team name.</small><div class="swatches">${CUFFS.map((c,i)=>{const taken=set[1-cap]&&S.cuffs[1-cap]===c.color,on=set[cap]&&S.cuffs[cap]===c.color;return `<button data-i="${i}" title="${c.name}" aria-label="${c.name}" style="--cc:${c.color}" class="${on?'on':''}" ${taken?'disabled':''}></button>`}).join('')}</div></div>`;
+  const body=`${invite}<div class="slots">${slot(0)}${slot(1)}</div><p style="font-size:12px;margin:10px 0 0">Not on a side yet: ${pool}. Up to two players per side.</p>${swatches}`;
+  const btns=[];
+  if(mine)[0,1].forEach(t=>{if(mine.team!==t&&teamPlayers(t).length<2)btns.push([`${mine.team==null?'Join':'Switch to'} ${NAMES[t]} (${t?'right':'left'})`,()=>{if(net.role==='host'){moveToTeam(mine,t);render();showLobby()}else send({t:'team',team:t})}])});
+  if(net.role==='host'){const ready=teamPlayers(0).length&&teamPlayers(1).length;btns.push([ready?'Start team match':'Waiting for both sides',startTeamMatch,!ready]);btns.push(['Copy invite link',()=>navigator.clipboard?.writeText(link).catch(()=>{}),true])}
+  const sig=body+btns.map(b=>b[0]+b[2]).join('|');
   $('lobbyOv').classList.add('show');
+  if(net.lobbySig===sig)return;   // unchanged: don't rebuild, so clicks are never lost
+  net.lobbySig=sig;
+  $('lobbyBody').innerHTML=body;
+  $('lobbyBody').querySelectorAll('.swatches button').forEach(b=>b.onclick=()=>{const i=+b.dataset.i;if(net.role==='host'){setTeamLook(cap,i);showLobby()}else send({t:'color',team:cap,color:i})});
+  const bx=$('lobbyButtons');bx.innerHTML='';
+  btns.forEach(([l,f,sec])=>{const b=document.createElement('button');b.className='go'+(sec?' sec':'');b.textContent=l;b.onclick=f;bx.appendChild(b)});
 }
 function startTeamMatch(){
   if(net.role!=='host'||S.mode!=='lobby'||!teamPlayers(0).length||!teamPlayers(1).length)return;
@@ -863,6 +885,7 @@ function receiveGuestAction(m){
   if(teamMode()){
     if(m.t==='join'&&S.mode==='lobby'&&m.uid&&!S.players.some(p=>p.id===m.uid)&&S.players.length<4){S.players.push({id:m.uid,name:m.name||'Player',team:null,captain:false})}
     else if(m.t==='team'&&S.mode==='lobby'){const p=S.players.find(x=>x.id===m.uid);if(p&&p.id!==S.players[0].id&&p.team!==m.team&&teamPlayers(m.team).length<2)moveToTeam(p,m.team)}
+    else if(m.t==='color'&&S.mode==='lobby'&&(m.team===0||m.team===1)&&m.uid===captainFor(m.team)?.id)setTeamLook(m.team,m.color);
     else if(m.t==='pick'&&m.uid===(S.mode==='review'?captainFor(m.team)?.id:activeIdFor(m.team)))lock(m.team,m.n);
     else if(m.t==='review'&&m.uid===activeIdFor(S.reviewing))handleReview(m.decision);
     else if(m.t==='strategy'&&S.strategy&&m.uid===captainFor(S.strategy.team)?.id&&S.strategy.options.includes(m.id))selectStrategy(m.id);
@@ -890,7 +913,7 @@ async function host(){
       if(!claim.committed)continue;
       net.code=code;net.room=room;net.last='';net.lastAction='';
       room.onDisconnect().remove();
-      S.mode='lobby';S.state='lobby';S.players=[{id:net.uid,name:NAMES[0],team:0,captain:true}];S.connected={[net.uid]:true};S.activeBat=null;S.activeBowl=null;NAMES[0]='Team Blue';NAMES[1]='Team Orange';
+      const hostName=NAMES[0];S.mode='lobby';S.state='lobby';S.players=[{id:net.uid,name:hostName,team:null,captain:false}];S.connected={[net.uid]:true};S.activeBat=null;S.activeBowl=null;resetTeamLook(0);resetTeamLook(1);
       room.child('actions').on('child_added',s=>receiveGuestAction(s.val()));
       room.child('presence').on('value',s=>{S.connected=s.val()||{};render();showLobby()});
       markPresent();
@@ -917,7 +940,7 @@ async function join(code){
 function snap(){
   const g=id=>$(id).innerHTML;
   const fx=p=>({text:$('fx'+p).textContent,cls:$('fx'+p).className});
-  return {S:{inn:S.inn,score:S.score,target:S.target,state:S.state,mode:S.mode,first:S.first,tw:S.tw,tossChoice:S.tossChoice,matchStartAt:S.matchStartAt,bk:S.bk,pick:S.pick,balls:S.balls,runs:S.runs,wickets:S.wickets,reviews:S.reviews,maxOvers:S.maxOvers,maxWickets:S.maxWickets,reviewing:S.reviewing,reviewId:S.reviewId,pendingOut:S.pendingOut,reviewDeadline:S.reviewDeadline,noticeId:S.noticeId,noticeTitle:S.noticeTitle,noticeDetail:S.noticeDetail,noticeUntil:S.noticeUntil,resultPhase:S.resultPhase,resultTitle:S.resultTitle,resultDetail:S.resultDetail,players:S.players,connected:S.connected,activeBat:S.activeBat,activeBowl:S.activeBowl,figures:S.figures,batting:S.batting,strategy:S.strategy,strategyId:S.strategyId,syncRevision:S.syncRevision,intro:S.intro,tossStarted:S.tossStarted,cuffs:S.cuffs,themeReady:S.themeReady,themePrompt:S.themePrompt},names:NAMES,guestReady:true,count:$('count').textContent,h0:g('h0'),h1:g('h1'),n0:$('n0').textContent,n1:$('n1').textContent,fx:[fx(0),fx(1)],log:g('log'),tossShow:$('tossOv').classList.contains('show'),ovShow:$('ov').classList.contains('show'),wt:$('wt').textContent,ws:$('ws').textContent,tb:g('tb')};
+  return {S:{inn:S.inn,score:S.score,target:S.target,state:S.state,mode:S.mode,first:S.first,tw:S.tw,tossChoice:S.tossChoice,matchStartAt:S.matchStartAt,bk:S.bk,pick:S.pick,balls:S.balls,runs:S.runs,wickets:S.wickets,reviews:S.reviews,maxOvers:S.maxOvers,maxWickets:S.maxWickets,reviewing:S.reviewing,reviewId:S.reviewId,pendingOut:S.pendingOut,reviewDeadline:S.reviewDeadline,noticeId:S.noticeId,noticeTitle:S.noticeTitle,noticeDetail:S.noticeDetail,noticeUntil:S.noticeUntil,resultPhase:S.resultPhase,resultTitle:S.resultTitle,resultDetail:S.resultDetail,players:S.players,connected:S.connected,activeBat:S.activeBat,activeBowl:S.activeBowl,figures:S.figures,batting:S.batting,strategy:S.strategy,strategyId:S.strategyId,syncRevision:S.syncRevision,intro:S.intro,tossStarted:S.tossStarted,cuffs:S.cuffs,cuffSet:S.cuffSet,themeReady:S.themeReady,themePrompt:S.themePrompt},names:NAMES,guestReady:true,count:$('count').textContent,h0:g('h0'),h1:g('h1'),n0:$('n0').textContent,n1:$('n1').textContent,fx:[fx(0),fx(1)],log:g('log'),tossShow:$('tossOv').classList.contains('show'),ovShow:$('ov').classList.contains('show'),wt:$('wt').textContent,ws:$('ws').textContent,tb:g('tb')};
 }
 function publishState(){
   if(net.role!=='host'||!net.room)return;
