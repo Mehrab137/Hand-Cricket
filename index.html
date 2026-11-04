@@ -14,7 +14,7 @@
 box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
 *,*::before,*::after{box-sizing:inherit}
 html{scroll-padding-top:env(safe-area-inset-top,0px)}
-body{margin:0;background:linear-gradient(180deg,rgba(6,14,20,.75),rgba(7,22,14,.92)),repeating-radial-gradient(ellipse at 50% 58%,#2a743f 0 7%,#236838 7.2% 14%,#1c5931 14.2% 21%,#174a2b 21.2% 29%);color:var(--bone);font-family:var(--body);min-height:100vh;position:relative;overflow-x:hidden}
+body{margin:0;background:radial-gradient(700px 420px at 6% -4%,rgba(255,122,89,.22),transparent 62%),radial-gradient(780px 460px at 98% 0,rgba(88,150,255,.26),transparent 62%),radial-gradient(640px 420px at 50% 106%,rgba(157,86,184,.22),transparent 60%),linear-gradient(180deg,rgba(8,12,34,.72),rgba(9,22,24,.9)),repeating-radial-gradient(ellipse at 50% 58%,#2a743f 0 7%,#236838 7.2% 14%,#1c5931 14.2% 21%,#174a2b 21.2% 29%);color:var(--bone);font-family:var(--body);min-height:100vh;position:relative;overflow-x:hidden}
 body::before,body::after{content:'';position:fixed;z-index:-1;top:52px;width:13px;height:340px;background:linear-gradient(90deg,#667583,#eaf5ff 42%,#7b8993 54%,#25333f);box-shadow:0 0 14px 4px rgba(225,246,255,.72),0 0 70px 22px rgba(208,236,255,.22);opacity:.9}
 body::before{left:clamp(8px,5vw,74px);transform:perspective(220px) rotateY(18deg)}body::after{right:clamp(8px,5vw,74px);transform:perspective(220px) rotateY(-18deg)}
 .wrap{max-width:1000px;margin:0 auto;padding:14px 14px 40px}
@@ -147,6 +147,52 @@ h1 span{color:var(--leather)}
 .help-rules{font-size:14px;line-height:1.45;color:#cbd7df;margin-bottom:14px}.help-rules p{margin:6px 0}.help-rules b{color:var(--brass)}
 @media(max-width:640px){.help-grid{grid-template-columns:repeat(4,1fr)}.hg .hand{width:44px}}
 @media(prefers-reduced-motion:reduce){.ms.show,.sparks i,.confetti i,.shake-s,.shake-l,.dots span,.tick{animation-duration:.01s!important}.confetti{display:none}}
+/* ---------- colour grading: indigo night + sunset glow ---------- */
+:root{--night:#0d1226;--panel:#1a2142;--panel2:#252e57;--line:#37427a;--brass:#ffc43d;--leather:#f0453a;--p1:#5ab0ff;--p2:#ff9a5c;--muted:#a3aed6}
+h1{background:linear-gradient(90deg,#fff,#ffd36b 55%,#ff7a59);-webkit-background-clip:text;background-clip:text;color:transparent}h1 span{color:#ff6a4d;-webkit-text-fill-color:#ff6a4d}
+.score{background:linear-gradient(120deg,#0e1738,#1c2f66 55%,#17375a);border-top-color:var(--tb,var(--brass))}
+.stat{background:rgba(8,14,40,.35)}.stat.score-main{background:linear-gradient(135deg,#27438a,#2f61b5)}.match-meta{background:rgba(5,9,30,.4)}
+.pad{background:linear-gradient(160deg,#232d5c,#151c3c)}.log{background:linear-gradient(160deg,#1c2548,#141a38)}
+.chase{background:linear-gradient(120deg,rgba(14,23,56,.94),rgba(24,52,80,.92))}
+.card{background:linear-gradient(145deg,#232e5e,#131a3a);border-color:#4b5aa8}
+.keys.n7 button{background:radial-gradient(circle at 50% 0,color-mix(in srgb,var(--c) 40%,#34417f),#1b2347 80%)}
+.keys.t3 button{background:radial-gradient(circle at 50% 0,color-mix(in srgb,var(--c) 38%,#34417f),#1b2347 80%)}
+.chip{background:var(--panel)}
+/* ---------- hands clash, wicket slam ---------- */
+.hand-box{position:relative}#h1 .hand{scale:-1 1}   /* mirror P2 so the two hands face each other */
+.hand.clash-l,.hand.clash-r{animation:clashL .8s cubic-bezier(.2,.9,.25,1) both}  /* P2 is mirrored, so the same keyframes come in from the right */
+@keyframes clashL{0%{transform:translateX(-135%) rotate(-28deg) scale(.7);opacity:0}40%{opacity:1}62%{transform:translateX(22%) rotate(7deg) scale(1.18)}78%{transform:translateX(-4%) rotate(-2deg) scale(.96)}100%{transform:none;opacity:1}}
+.burst{position:absolute;top:42%;width:34px;height:34px;border-radius:50%;pointer-events:none;opacity:0;background:radial-gradient(circle,#fff 0 22%,rgba(255,220,120,.95) 40%,transparent 70%);animation:burst .55s .42s ease-out}
+.burst.r{right:-8px}.burst.l{left:-8px}
+@keyframes burst{0%{transform:scale(.2);opacity:1}100%{transform:scale(3.4);opacity:0}}
+.hand-box.slam{animation:slamHand .75s cubic-bezier(.2,.9,.3,1)}
+@keyframes slamHand{0%{transform:none}25%{transform:translateY(-34px) rotate(-7deg) scale(1.14)}48%{transform:translateY(20px) scale(1.3)}66%{transform:translateY(-5px) scale(1.08)}100%{transform:none}}
+.flash.dip{animation:dip 1.1s;background:radial-gradient(circle,rgba(150,15,10,0) 25%,rgba(110,6,6,.82) 100%)}
+@keyframes dip{0%{opacity:0}18%{opacity:1}100%{opacity:0}}
+.slam-word{position:absolute;left:50%;top:44%;z-index:5;transform:translate(-50%,-50%) scale(.2);opacity:0;pointer-events:none;white-space:nowrap;font:clamp(34px,11vw,82px)/1 var(--head);color:#fff;text-shadow:0 5px 0 #7d1d18,0 0 28px rgba(255,70,55,.95)}
+.slam-word.show{animation:slamWord 1.5s cubic-bezier(.2,1.3,.3,1) forwards}
+@keyframes slamWord{0%{opacity:0;transform:translate(-50%,-50%) scale(.2) rotate(-10deg)}16%{opacity:1;transform:translate(-50%,-50%) scale(1.3) rotate(-5deg)}30%{transform:translate(-50%,-50%) scale(1) rotate(-3deg)}80%{opacity:1}100%{opacity:0;transform:translate(-50%,-62%) scale(1.05) rotate(-3deg)}}
+/* ---------- start / join menu ---------- */
+#mo.menu .card{max-width:440px;border-top:0;border-color:#5566b8;background:radial-gradient(520px 280px at 50% -8%,rgba(255,122,89,.3),transparent 70%),radial-gradient(420px 260px at 100% 100%,rgba(88,150,255,.25),transparent 70%),linear-gradient(160deg,#222d5e,#121939)}
+#mo.menu #mt{font:clamp(34px,10vw,50px)/1 var(--head);background:linear-gradient(90deg,#fff,#ffd36b 55%,#ff7a59);-webkit-background-clip:text;background-clip:text;color:transparent;margin:0}
+#mo.menu #mb{color:#c7d0ff;margin-bottom:14px;text-align:center}
+.menu-hero{display:flex;justify-content:center;align-items:flex-end;gap:2px;height:104px;margin:4px 0 0}
+.menu-hero .mh{display:block;width:80px}.menu-hero .hand{width:80px}.menu-hero .mh.r .hand{scale:-1 1}
+.menu-hero .mh.l{animation:mhL 2.4s ease-in-out infinite}.menu-hero .mh.r{animation:mhR 2.4s ease-in-out infinite}
+@keyframes mhL{0%,100%{transform:translateX(-16px) rotate(-8deg)}45%,55%{transform:translateX(8px) rotate(6deg)}}
+@keyframes mhR{0%,100%{transform:translateX(16px) rotate(8deg)}45%,55%{transform:translateX(-8px) rotate(-6deg)}}
+.menu-tag{font-size:14px;margin:6px 0 0}
+#mo.menu #mbt{gap:11px}
+#mo.menu .go{display:flex;flex-direction:column;align-items:flex-start;gap:2px;text-align:left;padding:13px 18px;border-radius:18px;font-size:18px;border:0}
+#mo.menu .go small{font:600 12px var(--body);opacity:.9}
+#mo.menu .go:nth-child(1){background:linear-gradient(135deg,#ff6a4d,#d6362f);box-shadow:0 4px 0 #8d1f1a,0 10px 20px rgba(0,0,0,.3)}
+#mo.menu .go:nth-child(2){background:linear-gradient(135deg,#46a0ff,#2c57cc);box-shadow:0 4px 0 #17337f,0 10px 20px rgba(0,0,0,.3)}
+#mo.menu .go:nth-child(3){background:linear-gradient(135deg,#ac62e0,#6c3aab);box-shadow:0 4px 0 #3f2166,0 10px 20px rgba(0,0,0,.3)}
+#mo.menu .go:nth-child(4){background:transparent;box-shadow:none;color:#c7d0ff;align-items:center;font-size:15px;padding:8px}
+#mb input.codein{font:900 clamp(28px,9vw,40px) var(--head);letter-spacing:.3em;text-indent:.3em;text-transform:uppercase;padding:14px 6px;border-radius:16px;background:rgba(0,0,0,.32);border:2px dashed #6678d8;color:#fff;margin:6px 0 2px}
+#mb input.codein:focus{outline:none;border-style:solid;border-color:var(--brass);box-shadow:0 0 0 4px rgba(255,196,61,.25)}
+#mo.menu .go.sec{background:transparent;box-shadow:none;color:#c7d0ff;align-items:center;font-size:15px;padding:8px}
+@media(prefers-reduced-motion:reduce){.hand.clash-l,.hand.clash-r,.hand-box.slam,.burst,.slam-word.show,.menu-hero .mh{animation-duration:.01s!important}}
 </style>
 </head>
 <body>
@@ -186,11 +232,12 @@ h1 span{color:var(--leather)}
  </div>
  <div class="side"><div class="role" id="r1"></div><div class="hand-box" id="h1"></div><div class="impact" id="fx1" aria-live="polite"></div><div class="num" id="n1"></div></div>
  <div class="flash" id="flash"></div>
+ <div class="slam-word" id="slamWord" aria-hidden="true"></div>
 </section>
 
 <section class="pads">
- <div class="pad" id="pad0" style="--c:var(--p1)"><h2><span id="nm0">Player 1</span><span class="lock" id="l0">Waiting</span></h2><div class="keys" id="k0"></div><div class="hint" id="hint0"></div></div>
- <div class="pad" id="pad1" style="--c:var(--p2)"><h2><span id="nm1">Player 2</span><span class="lock" id="l1">Waiting</span></h2><div class="keys" id="k1"></div><div class="hint" id="hint1"></div></div>
+ <div class="pad" id="pad0" style="--c:var(--t0,var(--p1))"><h2><span id="nm0">Player 1</span><span class="lock" id="l0">Waiting</span></h2><div class="keys" id="k0"></div><div class="hint" id="hint0"></div></div>
+ <div class="pad" id="pad1" style="--c:var(--t1,var(--p2))"><h2><span id="nm1">Player 2</span><span class="lock" id="l1">Waiting</span></h2><div class="keys" id="k1"></div><div class="hint" id="hint1"></div></div>
 </section>
 
 <section class="log"><h3>Ball by ball</h3><div id="log"><p class="t">Press Space or the button to bowl. Picks stay hidden until the reveal.</p></div></section>
@@ -323,12 +370,15 @@ function render(){
   $('go').disabled=(S.mode==='lobby'?!lobbyReady||net.role!=='host':S.state==='pick'||S.state==='strategy'||S.state==='over'||S.state==='choose'||S.state==='intro'||S.state==='reviewOffer'||now()<S.noticeUntil||!canControlSide(bowl()));
   document.querySelectorAll('.keys button').forEach(x=>x.disabled=S.state!=='pick'||(ai&&x.dataset.p==='1')||!canControlSide(+x.dataset.p));
   if(net.lastScore!==S.score){net.lastScore=S.score;const el=$('sScore');el.classList.remove('tick');void el.offsetWidth;el.classList.add('tick')}
-  try{renderChase();renderHint()}catch(e){}
+  try{renderChase();renderHint();applyTheme()}catch(e){}
 }
 function showHands(a,b,anim,cls){
   const cuffs=S&&S.cuffs?S.cuffs:['#15191f','#15191f'];
   $('h0').innerHTML=hand(a,SKIN[0],cuffs[0]);$('h1').innerHTML=hand(b,SKIN[1],cuffs[1]);
-  if(anim){$('h0').firstChild.classList.add(cls);$('h1').firstChild.classList.add(cls)}
+  if(anim&&cls==='pop'){   // reveal: the two hands fly in and clash, with a spark at each edge
+    $('h0').firstChild.classList.add('clash-l');$('h1').firstChild.classList.add('clash-r');
+    $('h0').insertAdjacentHTML('beforeend','<i class="burst r"></i>');$('h1').insertAdjacentHTML('beforeend','<i class="burst l"></i>');
+  }else if(anim){$('h0').firstChild.classList.add(cls);$('h1').firstChild.classList.add(cls)}
 }
 function animateHand(p,cls){
   const h=$('h'+p).firstChild;if(!h)return;
@@ -474,6 +524,7 @@ function reveal(){
   else{runs=B;msg=say(RUN[B],o)}
   if(runs>=4)cls='b';
   if(out){
+    emit('slam',String(bowl()),B===0?'DOUBLE FIST!':rnd(SLAMS));sfx('thud');
     S.pendingOut={B,W,msg:say(B===0?DF:OUT,o),cls:'o',batterName:playerLabel(bat()),bowlerName:playerLabel(bowl())};S.reviewing=bat();S.state='reviewOffer';S.reviewId++;S.reviewDeadline=Date.now()+3000;
     // The host is authoritative: an unanswered review expires after 3 seconds,
     // even if the batter's browser disconnects or never sends a choice.
@@ -652,6 +703,22 @@ function beginMatchCountdown(){
   },5050));
 }
 function flash(c){if(!c)return;emit('fl',c)}
+const SLAMS=['BOWLED!','CLEAN BOWLED!','CAUGHT!','STUMPED!','LBW!','OUT!'];
+SFX.thud=()=>{tone(110,.3,'square',.4,.09,45);buzz([35,25,70])};
+function doSlam(p,word){
+  const hb=$('h'+p);hb.classList.remove('slam');void hb.offsetWidth;hb.classList.add('slam');setTimeout(()=>hb.classList.remove('slam'),800);
+  const f=$('flash');f.className='flash';void f.offsetWidth;f.className='flash dip';
+  const w=$('slamWord');w.textContent=word;w.classList.remove('show');void w.offsetWidth;w.classList.add('show');
+  const st=$('stage');st.classList.remove('shake-s','shake-l');void st.offsetWidth;st.classList.add('shake-s');setTimeout(()=>st.classList.remove('shake-s'),600);
+}
+// Each team's cuff colour tints its pad, and the scoreboard takes the colour of whoever is batting.
+function applyTheme(){
+  const r=document.documentElement.style,set=S.cuffSet||[],cu=S.cuffs||[];
+  const col=t=>set[t]&&cu[t]&&cu[t]!=='#15191f'?cu[t]:'';
+  [0,1].forEach(t=>{const c=col(t);c?r.setProperty('--t'+t,c):r.removeProperty('--t'+t)});
+  const b=(S.mode==='lobby'||S.mode==='toss')?'':col(bat());
+  b?r.setProperty('--tb',b):r.removeProperty('--tb');
+}
 /* ---------- visual events: the host emits, every device plays them ---------- */
 function emit(k,a,b){
   const e={id:(S.evId=(S.evId||0)+1),k,a:a||'',b:b||''};
@@ -661,6 +728,7 @@ function emit(k,a,b){
 function playEv(e){
   if(e.k==='sfx'){SFX[e.a]&&SFX[e.a]()}
   else if(e.k==='fl')doFlash(e.a);
+  else if(e.k==='slam')setTimeout(()=>doSlam(+e.a,e.b),450);   // lands just after the hands clash
   else if(e.k==='ms')showMilestone(e.a,e.b);
   else if(e.k==='win')confetti(110);
 }
@@ -952,7 +1020,8 @@ function endRoom(){
 function modal(t,body,btns){
   $('mt').textContent=t;$('mb').innerHTML=body;
   const bx=$('mbt');bx.innerHTML='';
-  btns.forEach(([l,f,sec])=>{const b=document.createElement('button');b.className='go'+(sec?' sec':'');b.textContent=l;b.onclick=f;bx.appendChild(b)});
+  $('mo').classList.remove('menu');
+  btns.forEach(([l,f,sec])=>{const b=document.createElement('button');b.className='go'+(sec?' sec':'');const [a,c]=l.split('|');if(c)b.innerHTML=`<span>${a}</span><small>${c}</small>`;else b.textContent=l;b.onclick=f;bx.appendChild(b)});
   $('mo').classList.add('show');
   const i=$('mb').querySelector('input');
   if(i){i.focus();i.onkeydown=e=>{if(e.key==='Enter'&&bx.firstChild)bx.firstChild.click()}}
@@ -1015,14 +1084,16 @@ function tossView(show,title){
   $('tossOv').classList.toggle('show',show);
 }
 function menu(){
-  modal('Hand Cricket','Two players, one fist at a time. How do you want to play?',[
-    ['Play vs AI',()=>{unmodal();ai=true;net.role='solo';applyRole();askName(0,()=>askMatchSetup(()=>{setName(1,'AI');beginCuffSetup()}))}],
-    ['Create an online room',()=>{unmodal();ai=false;askName(0,()=>askMatchSetup(host,true))}],
-    ['Join with a room code',joinUI,1]]);
+  modal('Hand Cricket',`<div class="menu-hero"><span class="mh l">${hand(0,SKIN[0],'#15191f')}</span><span class="mh r">${hand(5,SKIN[1],'#15191f')}</span></div><div class="menu-tag">Rock-paper-scissors rules. Cricket glory.</div>`,[
+    ['🤖  Play vs AI|Warm up solo against the computer',()=>{unmodal();ai=true;net.role='solo';applyRole();askName(0,()=>askMatchSetup(()=>{setName(1,'AI');beginCuffSetup()}))}],
+    ['🌐  Create an online room|Host a match and invite your friends',()=>{unmodal();ai=false;askName(0,()=>askMatchSetup(host,true))}],
+    ['🔗  Join with a room code|Got a code? Jump straight in',joinUI]]);
+  $('mo').classList.add('menu');
 }
 function joinUI(){
-  modal('Join a room','Enter the 6-character code from your friend.<input id="mi" maxlength="6" placeholder="ABC123" autocomplete="off" style="text-transform:uppercase;letter-spacing:6px">',[
-    ['Join',()=>{const c=$('mi').value.trim().toUpperCase();if(c.length===6){unmodal();join(c)}}],['Back',menu,1]]);
+  modal('Join a room','Enter the 6-character room code<input id="mi" class="codein" maxlength="6" placeholder="······" autocomplete="off" autocapitalize="characters" spellcheck="false">',[
+    ['Join the match',()=>{const c=$('mi').value.trim().toUpperCase();if(c.length===6){unmodal();join(c)}}],['Back',menu,1]]);
+  $('mo').classList.add('menu');$('mi').addEventListener('input',e=>{e.target.value=e.target.value.toUpperCase().replace(/[^A-Z0-9]/g,'')});
 }
 function showWait(){
   const link=location.href.split('#')[0]+'#'+net.code;
