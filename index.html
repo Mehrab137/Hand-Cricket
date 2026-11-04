@@ -329,6 +329,9 @@ h1,.card h2,#mo.menu #mt{background-image:linear-gradient(90deg,#fff,var(--hl1) 
 .keys.n7 button[data-n="0"]{background:linear-gradient(120deg,#ff4d6d,#ffb02e,#ffe66d,#3fcf7a,#46a0ff,#ac62e0,#ff4d6d);background-size:300% 100%}
 .intro-hands{font-size:clamp(34px,10vw,52px);letter-spacing:.2em;margin:12px 0 2px;animation:bobH 1.6s ease-in-out infinite}.intro-card #introS{max-width:340px;margin:8px auto 0;line-height:1.35;font-weight:600}
 .slam-word.long{font-size:clamp(24px,8.2vw,62px)}
+.sndcheck{margin:4px 0 14px;padding:10px;border-radius:14px;background:rgba(0,0,0,.22)}.sndcheck b{display:block;font-size:14px}.sndcheck small{display:block;color:#c7d0ff;font-size:12px;margin:2px 0 8px}
+.sc-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px}.sc-grid button{display:flex;flex-direction:column;align-items:flex-start;gap:2px;padding:8px 10px;border:1px solid #5566b8;border-radius:12px;background:rgba(255,255,255,.07);color:var(--bone);font:700 13px var(--body);cursor:pointer}
+.sc-grid button:active{transform:scale(.97)}.sc-grid em{font:600 11px var(--body);font-style:normal;color:#a3aed6}.sc-grid em.mine{color:#6ee58d}
 </style>
 </head>
 <body>
@@ -387,7 +390,7 @@ h1,.card h2,#mo.menu #mt{background-image:linear-gradient(90deg,#fff,var(--hl1) 
 <div class="ump" id="ump" aria-live="assertive"><div class="ump-card"><small>THIRD UMPIRE</small><b id="umpT"></b></div></div>
 <div class="ms" id="ms" aria-live="polite"><div class="ms-card"><div class="sparks" id="msSpark"></div><div class="ms-title" id="msTitle"></div><div class="ms-detail" id="msDetail"></div></div></div>
 <div class="confetti" id="confetti" aria-hidden="true"></div>
-<div class="ov" id="helpOv"><div class="card help-card" role="dialog" aria-modal="true" aria-labelledby="helpTitle"><h2 id="helpTitle">How to play</h2><div class="help-grid" id="helpGrid"></div><div class="help-rules" id="helpRules"></div><button class="go" id="helpClose">Got it</button></div></div>
+<div class="ov" id="helpOv"><div class="card help-card" role="dialog" aria-modal="true" aria-labelledby="helpTitle"><h2 id="helpTitle">How to play</h2><div class="help-grid" id="helpGrid"></div><div class="help-rules" id="helpRules"></div><div class="sndcheck" id="sndCheck"></div><button class="go" id="helpClose">Got it</button></div></div>
 <div class="ov" id="tossOv"><div class="card" role="dialog" aria-modal="true" aria-labelledby="tossT"><h2 id="tossT"></h2><div style="color:var(--muted);margin-bottom:16px" id="tossSub">Choose how to start the match.</div><div style="display:flex;gap:10px" id="tossBtns"><button class="go" id="cBat">Bat first</button><button class="go" id="cBowl">Bowl first</button></div></div></div>
 <div class="ov" id="ov"><div class="card" role="dialog" aria-modal="true" aria-labelledby="wt">
  <div id="rx"></div><h2 id="wt"></h2><div id="ws" style="color:var(--muted)"></div>
@@ -651,20 +654,68 @@ function cheer(at,dur,vol){
   }catch(e){}
 }
 const HIT=.45;   // seconds: the moment the two hands clash, so sounds land on the visual
-function batCrack(big){nz(HIT,.05,{f:big?1500:2000,q:1.2,vol:big?.6:.4,atk:.002});tone(big?170:230,.09,'sine',HIT,big?.22:.15,90)}
+/* ---------- real sound files (optional) ----------
+   Put your own recordings in a "sounds" folder next to index.html and list them here.
+   Any file that is missing or fails to load just keeps the built-in synthesised sound.
+   files: one or more files (several = a random one each time)   vol: loudness 0-1.5
+   peak:  seconds into the file where the impact happens, so it lines up with the hand clash
+   max:   cut a long file after this many seconds (with a fade-out)   vary: false = no pitch variation */
+const SOUND_FILES={
+  bat:     {files:['sounds/bat.mp3'],      vol:1,   peak:0, vary:true },   // runs 1-3: ball off the bat
+  batBig:  {files:['sounds/bat-big.mp3'],  vol:1,   peak:0, vary:true },   // 4, 5 and 6: a bigger hit
+  stumps:  {files:['sounds/stumps.mp3'],   vol:1,   peak:0, vary:true },   // wicket: ball hits the stumps
+  catch:   {files:['sounds/catch.mp3'],    vol:1,   peak:0, vary:false, max:2.5},  // caught out: the appeal
+  cheer:   {files:['sounds/cheer.mp3'],    vol:.8,  peak:0, vary:false, max:3  },  // fours, sixes, double fist
+  applause:{files:['sounds/applause.mp3'], vol:.8,  peak:0, vary:false, max:2.5}   // 50 / 100 milestones
+};
+const SAMPLES={};
+async function loadSamples(){
+  if(loadSamples.done)return;loadSamples.done=true;
+  let c;try{c=actx()}catch(e){return}
+  for(const [name,cfg] of Object.entries(SOUND_FILES)){
+    for(const url of cfg.files){
+      try{
+        const r=await fetch(url);if(!r.ok)continue;
+        const buf=await c.decodeAudioData(await r.arrayBuffer());
+        (SAMPLES[name]=SAMPLES[name]||[]).push(buf);
+      }catch(e){}
+    }
+  }
+  try{refreshSoundCheck()}catch(e){}
+}
+['pointerdown','keydown','touchstart'].forEach(ev=>addEventListener(ev,()=>loadSamples(),{once:true,passive:true}));
+// Plays a loaded file; returns false (so the caller uses the built-in sound) if there is none.
+function playSample(name,o={}){
+  const list=SAMPLES[name];if(!snd||!list||!list.length)return false;
+  try{
+    const c=actx(),cfg=SOUND_FILES[name]||{},buf=list[Math.floor(Math.random()*list.length)];
+    const s=c.createBufferSource(),g=c.createGain(),at=o.at||0,peak=cfg.peak||0,vol=(cfg.vol==null?1:cfg.vol)*(o.vol==null?1:o.vol);
+    s.buffer=buf;if(cfg.vary!==false)s.playbackRate.value=1+(Math.random()*.08-.04);
+    const t=c.currentTime+Math.max(0,at-peak),off=Math.max(0,peak-at);
+    g.gain.setValueAtTime(vol,t);
+    if(cfg.max){g.gain.setValueAtTime(vol,t+Math.max(0,cfg.max-.4));g.gain.linearRampToValueAtTime(.0001,t+cfg.max)}
+    s.connect(g);g.connect(actx.m);s.start(t,off);if(cfg.max)s.stop(t+cfg.max+.05);
+    return true;
+  }catch(e){return false}
+}
+function batCrack(big){
+  if(big&&playSample('batBig',{at:HIT}))return;
+  if(playSample('bat',{at:HIT}))return;nz(HIT,.05,{f:big?1500:2000,q:1.2,vol:big?.6:.4,atk:.002});tone(big?170:230,.09,'sine',HIT,big?.22:.15,90)}
 const SFX={
   reveal:()=>{tone(180,.09,'square',0,.05,90);tone(520,.06,'triangle',.02,.04);buzz(14)},
   run:()=>batCrack(false),
-  four:()=>{batCrack(true);cheer(HIT+.1,1.3,.3);buzz([22,30,22])},
-  six:()=>{batCrack(true);cheer(HIT+.1,2.1,.42);buzz([30,40,30,40,60])},
+  four:()=>{batCrack(true);if(!playSample('cheer',{at:HIT+.1,vol:.7}))cheer(HIT+.1,1.3,.3);buzz([22,30,22])},
+  six:()=>{batCrack(true);if(!playSample('cheer',{at:HIT+.1,vol:1}))cheer(HIT+.1,2.1,.42);buzz([30,40,30,40,60])},
   // wicket sounds, chosen by the number both players showed
   stumps:()=>{   // 1-5 matched: ball hits timber, bails rattle
+    if(playSample('stumps',{at:HIT})){setTimeout(()=>buzz([40,40,90]),HIT*1000);return}
     nz(HIT,.06,{f:3200,q:.8,vol:.55,atk:.002});tone(200,.12,'sine',HIT,.2,80);
     [.07,.13,.2,.29,.4].forEach(d=>{nz(HIT+d,.05,{f:2400+Math.random()*2200,q:6,vol:.18,atk:.002});tone(1500+Math.random()*1800,.05,'square',HIT+d,.03)});
     setTimeout(()=>buzz([40,40,90]),HIT*1000);
   },
   catchOut:()=>{   // 6 matched: a crowd appeal, "Aaah, catch!"
     setTimeout(()=>buzz([30,30,30,30,80]),HIT*1000);
+    if(playSample('catch',{at:HIT}))return;
     if(!snd)return;
     try{
       const c=actx(),t=c.currentTime+HIT;
@@ -679,9 +730,10 @@ const SFX={
     }catch(e){}
     nz(HIT,1,{f:1400,to:2200,q:.9,vol:.25,atk:.06});
   },
-  crowdHappy:()=>{cheer(HIT,1.8,.4);setTimeout(()=>buzz([20,30,20]),HIT*1000)},   // 0 matched: happy crowd noise
+  crowdHappy:()=>{if(!playSample('cheer',{at:HIT}))cheer(HIT,1.8,.4);setTimeout(()=>buzz([20,30,20]),HIT*1000)},   // 0 matched: happy crowd noise
   applause:()=>{   // 50 / 100 milestones
     buzz([20,30,20,30,20]);if(!snd)return;
+    if(playSample('applause',{at:0}))return;
     for(let i=0;i<110;i++){const t=Math.random()*2.2,env=Math.min(1,t/.3)*(t>1.6?(2.2-t)/.6:1);nz(t,.03+Math.random()*.03,{f:1800+Math.random()*3200,q:.8,vol:.35*env+.02,atk:.002})}
     cheer(0,2.3,.22);
   },
@@ -1058,7 +1110,16 @@ function openHelp(){
     $('helpRules').innerHTML=`<p><b>Out:</b> both show the same number — including two fists.</p><p><b>Fist steal:</b> a batter showing 0 (fist) against a bowler’s N scores N runs.</p><p><b>Runs:</b> otherwise the batter scores the number they show.</p><p><b>Timer:</b> 3 seconds a ball. If you don’t pick, a random number is chosen.</p><p><b>Review:</b> each batter gets one. When out, win rock-paper-scissors to stay in.</p><p><b>Winning:</b> the chasing team wins the moment it reaches the target. Milestone banners pop up at 50 and 100 for players and teams.</p>`;
     $('helpGrid').dataset.b=1;
   }
+  loadSamples();refreshSoundCheck();
   $('helpOv').classList.add('show');$('helpClose').focus();
+}
+// Lists every sound with a play button and says whether it is your file or the built-in one.
+function refreshSoundCheck(){
+  const box=$('sndCheck');if(!box)return;
+  const items=[['Bat hit','run','bat'],['Big hit (4/6)','six','batBig'],['Stumps','stumps','stumps'],['Catch','catchOut','catch'],['Crowd cheer','crowdHappy','cheer'],['Applause','applause','applause']];
+  box.innerHTML='<b>Sound check</b><small>Tap to hear each sound. “Your file” means a recording from the sounds folder is loaded.</small><div class="sc-grid">'+
+    items.map(([l,fn,k])=>`<button data-fn="${fn}"><span>▶ ${l}</span><em class="${SAMPLES[k]&&SAMPLES[k].length?'mine':''}">${SAMPLES[k]&&SAMPLES[k].length?'your file'+(SAMPLES[k].length>1?'s':''):'built-in'}</em></button>`).join('')+'</div>';
+  box.querySelectorAll('button').forEach(b=>b.onclick=()=>{try{SFX[b.dataset.fn]()}catch(e){}});
 }
 $('helpT').addEventListener('click',openHelp);
 $('helpClose').addEventListener('click',()=>$('helpOv').classList.remove('show'));
@@ -1330,7 +1391,7 @@ function tossView(show,title){
   $('tossOv').classList.toggle('show',show);
 }
 function menu(){
-  modal('Hand Cricket',`<div class="menu-hero"><span class="mh l">${hand(0,SKIN[0],'#15191f')}</span><span class="mh r">${hand(5,SKIN[1],'#15191f')}</span></div><div class="menu-tag">Rock-paper-scissors rules. Cricket glory.</div>`,[
+  modal('Hand Cricket',`<div class="menu-hero"><span class="mh l">${hand(0,SKIN[0],'#15191f')}</span><span class="mh r">${hand(5,SKIN[1],'#15191f')}</span></div><div class="menu-tag">Let's Make Those Fists Talk with Hand Cricket!</div>`,[
     ['🤖  Play vs AI|Warm up solo against the computer',()=>{unmodal();ai=true;net.role='solo';applyRole();askName(0,()=>askMatchSetup(()=>{setName(1,'🤖 AI');beginCuffSetup()}))}],
     ['🌐  Create an online room|Host a match and invite your friends',()=>{unmodal();ai=false;askName(0,()=>askMatchSetup(host,true))}],
     ['🔗  Join with a room code|Got a code? Jump straight in',joinUI]]);
