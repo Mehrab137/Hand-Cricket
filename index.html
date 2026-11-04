@@ -245,6 +245,8 @@ h1{background:linear-gradient(90deg,#fff,#ffd36b 55%,#ff7a59);-webkit-background
 .rcount{text-align:center;font-size:12px;color:#c7d0ff;margin-top:8px}.lobby-tip{text-align:center;color:#dfe5ff;font-weight:700;font-size:14px;margin-top:12px}
 @media(max-width:420px){.thand .hand{width:58px}.pl{font-size:13px;padding:6px}.av{width:26px;height:26px}.rk{font-size:10px}}
 @media(prefers-reduced-motion:reduce){.thand .hand,.join,.cappanel.need{animation:none}}
+.dots3{display:inline-flex;gap:4px;margin-left:8px;vertical-align:middle}.dots3 i{width:7px;height:7px;border-radius:50%;background:#ffd36b;animation:dbn 1s infinite}.dots3 i:nth-child(2){animation-delay:.15s}.dots3 i:nth-child(3){animation-delay:.3s}
+@keyframes dbn{0%,80%,100%{transform:translateY(0);opacity:.5}40%{transform:translateY(-6px);opacity:1}}#tossSub{color:#dfe5ff!important}
 </style>
 </head>
 <body>
@@ -390,7 +392,7 @@ function moveToTeam(player,team){
   const newRoster=teamPlayers(team),existingCaptain=newRoster.find(p=>p.captain&&p.id!==player.id);
   player.captain=!existingCaptain;
 }
-const canChooseToss=()=>!teamMode()?(!online()||me()===S.tw):captainFor(S.tw)?.id===net.uid;
+const canChooseToss=()=>!teamMode()?(net.role==='solo'?S.tw===0:(!online()||me()===S.tw)):captainFor(S.tw)?.id===net.uid;
 const bowlerKey=()=>teamMode()?S.activeBowl:'side'+bowl();
 const batterKey=()=>teamMode()?S.activeBat:'side'+bat();
 function bowlerFigure(){const f=(S.figures||{})[bowlerKey()]||{balls:0,runs:0,wickets:0};return `${Math.floor(f.balls/6)}.${f.balls%6}-${f.runs}-${f.wickets}`}
@@ -477,6 +479,10 @@ function finishCuff(color){
 }
 function completeCuffSetup(){
   if(!S.themeReady.every(Boolean))return;
+  if(net.role==='solo'){   // the AI gets its own cuff colour, so solo matches get the same team colours as multiplayer
+    const pool=CUFFS.filter(c=>c.color!=='#15191f'&&c.color!==S.cuffs[0]);
+    S.cuffs[1]=pool[Math.floor(Math.random()*pool.length)].color;S.cuffSet=[true,true];showHands(0,0,false);
+  }
   S.themePrompt=false;unmodal();beginToss();
 }
 function beginCuffSetup(){
@@ -852,6 +858,7 @@ function renderChase(){
 // One short "what do I do now?" line for online players.
 function renderHint(){
   const el=$('hintLine');let t='';
+  if(net.role==='solo'&&S.state==='pick')t=(S.mode==='toss'||S.mode==='review')?'Rock, paper or scissors — pick now!':(bat()===0?'You’re batting — pick 0–6':'You’re bowling — pick 0–6');
   if(online()&&S.state==='pick'){
     if(S.mode==='toss'||S.mode==='review')t=(canControlSide(0)||canControlSide(1))?'Rock, paper or scissors — pick now!':'Captains are playing…';
     else t=canControlSide(bat())?'You’re batting — pick 0–6':canControlSide(bowl())?'You’re bowling — pick 0–6':'Watching this ball…';
@@ -1129,15 +1136,16 @@ function again(){
 }
 function tossView(show,title){
   const mine=canChooseToss();
-  $('tossT').textContent=title;
+  $('tossT').textContent=title?'🪙 '+title:'';
+  const esc=x=>String(x).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
   const captain=teamMode()?captainFor(S.tw)?.name:NAMES[S.tw];
-  $('tossSub').textContent=mine?'Choose whether your team bats or bowls.':`${captain||NAMES[S.tw]} is choosing whether ${NAMES[S.tw]} bats or bowls.`;
+  $('tossSub').innerHTML=mine?'Choose whether your team bats or bowls.':(net.role==='solo'?'The AI is thinking':`${esc(captain||NAMES[S.tw])} is choosing whether ${esc(NAMES[S.tw])} bats or bowls`)+'<span class="dots3"><i></i><i></i><i></i></span>';
   $('tossBtns').style.display=mine?'flex':'none';
   $('tossOv').classList.toggle('show',show);
 }
 function menu(){
-  modal('Hand Cricket',`<div class="menu-hero"><span class="mh l">${hand(0,SKIN[0],'#15191f')}</span><span class="mh r">${hand(5,SKIN[1],'#15191f')}</span></div><div class="menu-tag">Rock-paper-scissors rules. Cricket glory.</div>`,[
-    ['🤖  Play vs AI|Warm up solo against the computer',()=>{unmodal();ai=true;net.role='solo';applyRole();askName(0,()=>askMatchSetup(()=>{setName(1,'AI');beginCuffSetup()}))}],
+  modal('Hand Cricket',`<div class="menu-hero"><span class="mh l">${hand(0,SKIN[0],'#15191f')}</span><span class="mh r">${hand(5,SKIN[1],'#15191f')}</span></div><div class="menu-tag">Let's Make Those Fists Move and Play Cricket!</div>`,[
+    ['🤖  Play vs AI|Warm up solo against the computer',()=>{unmodal();ai=true;net.role='solo';applyRole();askName(0,()=>askMatchSetup(()=>{setName(1,'🤖 AI');beginCuffSetup()}))}],
     ['🌐  Create an online room|Host a match and invite your friends',()=>{unmodal();ai=false;askName(0,()=>askMatchSetup(host,true))}],
     ['🔗  Join with a room code|Got a code? Jump straight in',joinUI]]);
   $('mo').classList.add('menu');
