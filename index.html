@@ -193,6 +193,58 @@ h1{background:linear-gradient(90deg,#fff,#ffd36b 55%,#ff7a59);-webkit-background
 #mb input.codein:focus{outline:none;border-style:solid;border-color:var(--brass);box-shadow:0 0 0 4px rgba(255,196,61,.25)}
 #mo.menu .go.sec{background:transparent;box-shadow:none;color:#c7d0ff;align-items:center;font-size:15px;padding:8px}
 @media(prefers-reduced-motion:reduce){.hand.clash-l,.hand.clash-r,.hand-box.slam,.burst,.slam-word.show,.menu-hero .mh{animation-duration:.01s!important}}
+/* ---------- one look everywhere: every card, button and input follows the main menu ---------- */
+.card{border:1px solid #5566b8;background:radial-gradient(520px 280px at 50% -8%,rgba(255,122,89,.26),transparent 70%),radial-gradient(420px 260px at 100% 100%,rgba(88,150,255,.22),transparent 70%),linear-gradient(160deg,#222d5e,#121939);position:relative}
+.card::before{content:'';position:absolute;left:0;right:0;top:0;height:4px;border-radius:18px 18px 0 0;background:linear-gradient(90deg,#ff6a4d,#ffc43d,#46a0ff,#ac62e0)}
+.card h2{background:linear-gradient(90deg,#fff,#ffd36b 55%,#ff7a59);-webkit-background-clip:text;background-clip:text;color:transparent}
+.card p,.card .cuff-name{color:#dfe5ff}
+.card .go{border:0;border-radius:16px;padding:13px 18px;font-size:17px;background:linear-gradient(135deg,#ff6a4d,#d6362f);box-shadow:0 4px 0 #8d1f1a,0 10px 20px rgba(0,0,0,.3)}
+.card .go:nth-child(2){background:linear-gradient(135deg,#46a0ff,#2c57cc);box-shadow:0 4px 0 #17337f,0 10px 20px rgba(0,0,0,.3)}
+.card .go:nth-child(3){background:linear-gradient(135deg,#ac62e0,#6c3aab);box-shadow:0 4px 0 #3f2166,0 10px 20px rgba(0,0,0,.3)}
+.card .go:nth-child(4){background:linear-gradient(135deg,#3fcf7a,#1f9a55);box-shadow:0 4px 0 #126a3a,0 10px 20px rgba(0,0,0,.3)}
+.card .go.sec{background:rgba(255,255,255,.08);border:1px solid #5566b8;box-shadow:none;color:#dfe5ff}
+.card .go:disabled{background:linear-gradient(135deg,#3a4478,#2a3260);box-shadow:none;color:#aab4e6}
+#mb input,#mb select{background:rgba(0,0,0,.3)!important;border:2px solid #5566b8!important;border-radius:14px!important;color:#fff!important;font-weight:700}
+#mb input:focus,#mb select:focus{outline:none;border-color:var(--brass)!important;box-shadow:0 0 0 4px rgba(255,196,61,.22)}
+.card table{background:rgba(0,0,0,.2);border-radius:12px;overflow:hidden}.card td,.card th{border-bottom:1px solid rgba(255,255,255,.1)}.card th{color:#c7d0ff}
+.cuff-preview{border-color:#6678d8}.cuff-skip{color:#c7d0ff}
+/* ---------- team lobby: pick a side ---------- */
+#lobbyOv .card{max-width:580px;max-height:94vh;overflow:auto}#lobbyButtons{display:none!important}
+#lobbyBody{color:var(--bone)!important;text-align:left;margin-bottom:0!important}
+.invite{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 14px;border-radius:16px;background:rgba(0,0,0,.28);border:2px dashed #6678d8;margin-bottom:12px}
+.invite small{display:block;color:#c7d0ff;letter-spacing:.1em;text-transform:uppercase;font-size:10px}
+.invite code{display:block;font:900 clamp(24px,7vw,34px) var(--head);letter-spacing:.26em;color:var(--brass)}
+.invite .copy{border:0;border-radius:12px;padding:10px 14px;font:800 13px var(--body);color:#fff;cursor:pointer;background:linear-gradient(135deg,#46a0ff,#2c57cc);box-shadow:0 3px 0 #17337f;white-space:nowrap}
+.roompill{display:inline-block;margin-bottom:10px;padding:5px 12px;border-radius:999px;background:rgba(0,0,0,.3);border:1px solid #5566b8;font:800 12px var(--body);letter-spacing:.12em;color:#ffd36b}
+.waitroom{margin:0 0 12px;padding:8px 10px 10px;border-radius:14px;background:rgba(255,255,255,.06)}.waitroom .lbl{font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:#c7d0ff;font-weight:800}
+.tslots{display:grid;grid-template-columns:1fr auto 1fr;gap:8px;align-items:stretch}
+.vs{align-self:center;font:900 20px var(--head);color:#ffd36b;text-shadow:0 2px 0 rgba(0,0,0,.4)}
+.tslot{--tc:#c7d0ff;min-width:0;border-radius:18px;padding:12px 10px 10px;text-align:center;background:linear-gradient(170deg,color-mix(in srgb,var(--tc) 24%,#1b2347),#141b3a);border:2px solid color-mix(in srgb,var(--tc) 55%,#2b3570);transition:transform .15s,box-shadow .15s}
+.tslot.mine{box-shadow:0 0 0 3px rgba(255,196,61,.6),0 12px 24px rgba(0,0,0,.35);transform:translateY(-2px)}
+.tside{font-size:10px;letter-spacing:.16em;color:#c7d0ff;font-weight:800}
+.tname{font:900 clamp(17px,4.6vw,22px) var(--head);color:var(--tc);text-shadow:0 2px 0 rgba(0,0,0,.4);margin:2px 0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.thand .hand{width:74px;margin:2px auto 6px;animation:bobH 2.6s ease-in-out infinite}.tslot.l .thand .hand{rotate:-4deg}.tslot.r .thand .hand{scale:-1 1;rotate:4deg}
+@keyframes bobH{0%,100%{transform:translateY(0)}50%{transform:translateY(-5px)}}
+.pl{display:flex;align-items:center;gap:8px;min-width:0;margin-top:6px;padding:7px 8px;border-radius:12px;background:rgba(0,0,0,.26);text-align:left;font-weight:700;font-size:14px}
+.pl.me{box-shadow:inset 0 0 0 1px rgba(255,196,61,.6)}.pl.rdy{box-shadow:inset 0 0 0 1px rgba(110,229,141,.55)}
+.pl.open{justify-content:center;background:transparent;border:1px dashed #6678d8;color:#a3aed6;font-weight:600;opacity:.7}
+.av{flex:none;width:30px;height:30px;border-radius:50%;display:grid;place-items:center;background:var(--ac);color:#fff;font:900 14px var(--head);text-shadow:0 1px 2px rgba(0,0,0,.7)}
+.pn{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.pn em{font-style:normal;font-weight:600;font-size:12px;color:#c7d0ff}
+.rk{font-size:11px;font-weight:800;color:#6ee58d;white-space:nowrap}.rk.wait{color:#a3aed6;font-weight:700}
+.join{margin-top:10px;width:100%;border:0;border-radius:14px;padding:12px 8px;font:900 14px var(--body);color:#fff;cursor:pointer;animation:pulseJ 1.8s ease-in-out infinite}
+.join.l{background:linear-gradient(135deg,#ff6a4d,#d6362f);box-shadow:0 4px 0 #8d1f1a}.join.r{background:linear-gradient(135deg,#46a0ff,#2c57cc);box-shadow:0 4px 0 #17337f}
+.join:active{transform:translateY(3px);box-shadow:none;animation:none}@keyframes pulseJ{0%,100%{filter:brightness(1)}50%{filter:brightness(1.18)}}
+.here{margin-top:10px;font-size:12px;font-weight:800;color:#ffd36b}
+.cappanel{margin-top:12px;padding:12px;border-radius:16px;background:rgba(255,255,255,.06);border:2px dashed #6678d8}.cappanel.need{border-color:var(--brass);animation:needGlow 1.6s ease-in-out infinite}
+@keyframes needGlow{0%,100%{box-shadow:0 0 0 0 rgba(255,196,61,0)}50%{box-shadow:0 0 0 5px rgba(255,196,61,.25)}}
+.cappanel b{display:block;font-size:14px}.cappanel small{color:#c7d0ff}.swatches button{width:40px;height:40px;display:grid;place-items:center;border:3px solid transparent;transition:transform .12s}.swatches button:hover:not(:disabled){transform:scale(1.12)}.swatches button.on{border-color:#fff}.swatches button.on::after{content:'✓';color:#fff;font-weight:900;text-shadow:0 1px 3px #000}
+.rdy-btn{margin-top:12px;width:100%;border:0;border-radius:16px;padding:14px;font:900 17px var(--body);color:#fff;cursor:pointer;background:linear-gradient(135deg,#3fcf7a,#1f9a55);box-shadow:0 4px 0 #126a3a,0 10px 20px rgba(0,0,0,.3)}
+.rdy-btn.on{background:linear-gradient(135deg,#2a3568,#1d2650);box-shadow:0 4px 0 #101637;color:#6ee58d;border:2px solid #6ee58d}
+.start{margin-top:10px;width:100%;border:0;border-radius:16px;padding:15px;font:900 18px var(--body);color:#fff;cursor:pointer;background:linear-gradient(135deg,#ffb02e,#ff6a4d);box-shadow:0 4px 0 #a2431a,0 12px 22px rgba(0,0,0,.32)}
+.start:disabled{background:linear-gradient(135deg,#3a4478,#2a3260);box-shadow:none;color:#c7d0ff;cursor:default}
+.rcount{text-align:center;font-size:12px;color:#c7d0ff;margin-top:8px}.lobby-tip{text-align:center;color:#dfe5ff;font-weight:700;font-size:14px;margin-top:12px}
+@media(max-width:420px){.thand .hand{width:58px}.pl{font-size:13px;padding:6px}.av{width:26px;height:26px}.rk{font-size:10px}}
+@media(prefers-reduced-motion:reduce){.thand .hand,.join,.cappanel.need{animation:none}}
 </style>
 </head>
 <body>
@@ -261,7 +313,7 @@ h1{background:linear-gradient(90deg,#fff,#ffd36b 55%,#ff7a59);-webkit-background
 
 <div class="ov" id="strategyOv"><div class="card winner-card" role="status" aria-live="assertive"><h2 id="strategyTitle"></h2><p id="strategyDetail"></p></div></div>
 
-<div class="ov" id="lobbyOv"><div class="card" role="dialog" aria-modal="true"><h2>Team lobby</h2><div id="lobbyBody" style="color:var(--muted);margin-bottom:16px"></div><div id="lobbyButtons" style="display:grid;gap:8px"></div></div></div>
+<div class="ov" id="lobbyOv"><div class="card" role="dialog" aria-modal="true"><h2>Pick your side</h2><div id="lobbyBody" style="color:var(--muted);margin-bottom:16px"></div><div id="lobbyButtons" style="display:grid;gap:8px"></div></div></div>
 
 <div class="ov" id="introOv"><div class="card intro-card" role="status" aria-live="assertive"><h2>Toss starting</h2><div style="color:var(--muted)">Get your hand ready</div><div class="intro-n" id="introN">3</div></div></div>
 
@@ -1123,30 +1175,36 @@ function setTeamLook(t,i){
 }
 function showLobby(){
   if(!teamMode()||S.mode!=='lobby'){$('lobbyOv').classList.remove('show');net.lobbySig='';return}
-  const set=S.cuffSet||[false,false],mine=localPlayer();
-  const ink=t=>set[t]?S.cuffs[t]:'var(--bone)';
+  const esc=x=>String(x).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+  const set=S.cuffSet||[false,false],mine=localPlayer(),conn=S.connected||{},host=net.role==='host';
+  const ink=t=>set[t]?S.cuffs[t]:'#c7d0ff';
+  const chip=(p,t)=>`<div class="pl${p.id===net.uid?' me':''}${p.ready?' rdy':''}"><span class="av" style="--ac:${t==null?'#7d8bd8':ink(t)}">${esc((p.name||'?').trim().charAt(0).toUpperCase())}</span><span class="pn">${esc(p.name)}${p.id===net.uid?' <em>(you)</em>':''}</span>${p.captain?'<span title="Captain">👑</span>':''}${p.team!=null?(p.ready?'<span class="rk">✓ Ready</span>':'<span class="rk wait">Not ready</span>'):''}${conn[p.id]?'':'<span class="rk wait">reconnecting…</span>'}</div>`;
   const slot=t=>{
-    const ps=teamPlayers(t).map(p=>`<div class="lp">${p.captain?'★ ':''}${p.name}${p.captain?' <small style="display:inline;letter-spacing:0">captain</small>':''}${p.ready?' <span style="color:#7ddc9a">✓ ready</span>':''}${(S.connected||{})[p.id]?'':' <small style="display:inline;letter-spacing:0">· reconnecting…</small>'}</div>`).join('')||'<div class="lp" style="color:var(--muted)">Open slot</div>';
-    return `<div class="slot"><small>${t?'RIGHT SIDE':'LEFT SIDE'}</small><b style="color:${ink(t)}">${NAMES[t]}</b>${hand(0,SKIN[t],S.cuffs[t])}${ps}</div>`;
+    const ps=teamPlayers(t),full=ps.length>=2,here=!!mine&&mine.team===t;
+    const rows=ps.map(p=>chip(p,t)).join('')+'<div class="pl open">Open spot</div>'.repeat(Math.max(2-ps.length,0));
+    const act=here?'<div class="here">You’re on this side</div>':(mine&&!full?`<button class="join ${t?'r':'l'}" data-join="${t}">${mine.team==null?'Join':'Switch to'} ${t?'right':'left'} side</button>`:(full?'<div class="here">Side is full</div>':''));
+    return `<div class="tslot ${t?'r':'l'}${here?' mine':''}" style="--tc:${ink(t)}"><div class="tside">${t?'RIGHT SIDE':'LEFT SIDE'}</div><div class="tname">${esc(NAMES[t])}</div><div class="thand">${hand(0,SKIN[t],S.cuffs[t])}</div>${rows}${act}</div>`;
   };
-  const pool=S.players.filter(p=>p.team==null).map(p=>p.name+((S.connected||{})[p.id]?'':' …')).join(', ')||'nobody';
   const link=location.href.split('#')[0]+'#'+net.code;
-  const invite=net.role==='host'?`<div style="margin:0 0 12px;padding:10px;background:rgba(0,0,0,.2);border:1px solid var(--line);border-radius:10px"><small style="color:var(--muted);text-transform:uppercase;letter-spacing:.08em">Invite code</small><code style="display:block;font:700 28px var(--head);letter-spacing:6px;color:var(--brass);margin-top:3px">${net.code}</code><div style="font-size:11px;word-break:break-all;margin-top:6px">${link}</div></div>`:'';
+  const top=host?`<div class="invite"><div><small>Invite code</small><code>${net.code}</code></div><button class="copy" data-copy>Copy link</button></div>`:(net.code?`<div class="roompill">ROOM ${esc(net.code)}</div>`:'');
+  const un=S.players.filter(p=>p.team==null);
+  const wait=un.length?`<div class="waitroom"><div class="lbl">Waiting room · tap a side below</div>${un.map(p=>chip(p,null)).join('')}</div>`:'';
   const cap=mine&&mine.captain&&mine.team!=null?mine.team:-1;
-  const swatches=cap<0?'':`<div style="margin-top:12px;text-align:left"><small style="color:var(--muted)">You are captain. Pick your team’s cuff colour — it becomes the team name.</small><div class="swatches">${CUFFS.map((c,i)=>{const taken=set[1-cap]&&S.cuffs[1-cap]===c.color,on=set[cap]&&S.cuffs[cap]===c.color;return `<button data-i="${i}" title="${c.name}" aria-label="${c.name}" style="--cc:${c.color}" class="${on?'on':''}" ${taken?'disabled':''}></button>`}).join('')}</div></div>`;
-  const body=`${invite}<div class="slots">${slot(0)}${slot(1)}</div><p style="font-size:12px;margin:10px 0 0">Not on a side yet: ${pool}. Up to two players per side.</p>${swatches}`;
-  const btns=[];
-  if(mine)[0,1].forEach(t=>{if(mine.team!==t&&teamPlayers(t).length<2)btns.push([`${mine.team==null?'Join':'Switch to'} ${NAMES[t]} (${t?'right':'left'})`,()=>{if(net.role==='host'){moveToTeam(mine,t);render();showLobby()}else send({t:'team',team:t})}])});
-  if(mine&&mine.team!=null)btns.unshift([mine.ready?'Not ready':'I’m ready',()=>{if(net.role==='host'){mine.ready=!mine.ready;render();showLobby()}else send({t:'ready',value:!mine.ready})},!!mine.ready]);
-  if(net.role==='host'){const st=lobbyStatus();btns.push([st.ok?'Start team match':st.msg,startTeamMatch,!st.ok]);btns.push(['Copy invite link',()=>navigator.clipboard?.writeText(link).catch(()=>{}),true])}
-  const sig=body+btns.map(b=>b[0]+b[2]).join('|');
+  const cname=cap>=0&&set[cap]?(CUFFS.find(c=>c.color===S.cuffs[cap])||{}).name:'';
+  const caps=cap<0?'':`<div class="cappanel${set[cap]?'':' need'}"><b>👑 You’re the captain</b><small>${set[cap]?`Your team is Team ${esc(cname)}. Tap another colour to change it.`:'Pick your cuff colour — it becomes your team’s name.'}</small><div class="swatches">${CUFFS.map((c,i)=>{const taken=set[1-cap]&&S.cuffs[1-cap]===c.color,on=set[cap]&&S.cuffs[cap]===c.color;return `<button data-i="${i}" title="${c.name}" aria-label="${c.name}" style="--cc:${c.color}" class="${on?'on':''}" ${taken?'disabled':''}></button>`}).join('')}</div></div>`;
+  const st=lobbyStatus(),nReady=S.players.filter(p=>p.team!=null&&p.ready).length;
+  const ready=mine&&mine.team!=null?`<button class="rdy-btn${mine.ready?' on':''}" data-ready>${mine.ready?'✓ You’re ready — tap to undo':'I’m ready!'}</button>`:`<div class="lobby-tip">👆 Tap a side to join the match</div>`;
+  const start=host?`<button class="start" data-start ${st.ok?'':'disabled'}>${st.ok?'Start the match!':esc(st.msg)}</button>`:`<div class="rcount">${st.ok?'Everyone is ready — waiting for the host to start…':esc(st.msg)}</div>`;
+  const body=`${top}${wait}<div class="tslots">${slot(0)}<div class="vs">VS</div>${slot(1)}</div>${caps}${ready}${start}<div class="rcount">${nReady}/${S.players.length} ready</div>`;
   $('lobbyOv').classList.add('show');
-  if(net.lobbySig===sig)return;   // unchanged: don't rebuild, so clicks are never lost
-  net.lobbySig=sig;
-  $('lobbyBody').innerHTML=body;
-  $('lobbyBody').querySelectorAll('.swatches button').forEach(b=>b.onclick=()=>{const i=+b.dataset.i;if(net.role==='host'){setTeamLook(cap,i);showLobby()}else send({t:'color',team:cap,color:i})});
-  const bx=$('lobbyButtons');bx.innerHTML='';
-  btns.forEach(([l,f,sec])=>{const b=document.createElement('button');b.className='go'+(sec?' sec':'');b.textContent=l;b.onclick=f;bx.appendChild(b)});
+  if(net.lobbySig===body)return;   // unchanged: don't rebuild, so clicks are never lost
+  net.lobbySig=body;
+  const L=$('lobbyBody');L.innerHTML=body;$('lobbyButtons').innerHTML='';
+  L.querySelectorAll('[data-join]').forEach(b=>b.onclick=()=>{const t=+b.dataset.join;if(host){moveToTeam(mine,t);render();showLobby()}else send({t:'team',team:t})});
+  L.querySelectorAll('[data-ready]').forEach(b=>b.onclick=()=>{if(host){mine.ready=!mine.ready;render();showLobby()}else send({t:'ready',value:!mine.ready})});
+  L.querySelectorAll('[data-start]').forEach(b=>b.onclick=startTeamMatch);
+  L.querySelectorAll('[data-copy]').forEach(b=>b.onclick=()=>{try{navigator.clipboard.writeText(link);b.textContent='Copied ✓'}catch(e){}});
+  L.querySelectorAll('.swatches button').forEach(b=>b.onclick=()=>{const i=+b.dataset.i;if(host){setTeamLook(cap,i);showLobby()}else send({t:'color',team:cap,color:i})});
 }
 function startTeamMatch(){
   if(net.role!=='host'||S.mode!=='lobby'||!lobbyStatus().ok)return;
