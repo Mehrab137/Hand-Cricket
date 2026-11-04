@@ -124,7 +124,7 @@ h1 span{color:var(--leather)}
 @keyframes dotin{0%{transform:scale(.2);opacity:0}100%{transform:scale(1);opacity:1}}
 /* milestone banner + sparkles */
 .ms{position:fixed;left:0;right:0;top:calc(13% + env(safe-area-inset-top,0px));display:flex;justify-content:center;pointer-events:none;z-index:30;opacity:0;visibility:hidden;padding:0 14px}
-.ms.show{visibility:visible;animation:msIn 3s cubic-bezier(.2,1.2,.3,1) forwards}
+.ms.show{visibility:visible;animation:msIn 2.2s cubic-bezier(.2,1.2,.3,1) forwards}
 .ms-card{position:relative;padding:18px 36px;border-radius:22px;text-align:center;max-width:min(94vw,540px);background:linear-gradient(135deg,#4a3206,#9a6a0e 45%,#e8b43f);border:2px solid #fff3c4;box-shadow:0 0 0 5px rgba(227,171,60,.28),0 18px 50px rgba(0,0,0,.55),0 0 70px rgba(255,214,102,.6)}
 .ms.team .ms-card{background:linear-gradient(135deg,#0b2848,#1c5da3 50%,#62b6ff);border-color:#d8f0ff;box-shadow:0 0 0 5px rgba(98,182,255,.28),0 18px 50px rgba(0,0,0,.55),0 0 70px rgba(98,182,255,.6)}
 .ms-title{font:clamp(32px,9vw,60px)/1 var(--head);color:#fff;text-shadow:0 3px 0 rgba(40,25,0,.55);letter-spacing:1px}
@@ -328,6 +328,7 @@ h1,.card h2,#mo.menu #mt{background-image:linear-gradient(90deg,#fff,var(--hl1) 
 .keys.n7 button[data-n="4"]{background:linear-gradient(160deg,#a9d8ff,#3f8cff 50%,#1d4fb8)}
 .keys.n7 button[data-n="0"]{background:linear-gradient(120deg,#ff4d6d,#ffb02e,#ffe66d,#3fcf7a,#46a0ff,#ac62e0,#ff4d6d);background-size:300% 100%}
 .intro-hands{font-size:clamp(34px,10vw,52px);letter-spacing:.2em;margin:12px 0 2px;animation:bobH 1.6s ease-in-out infinite}.intro-card #introS{max-width:340px;margin:8px auto 0;line-height:1.35;font-weight:600}
+.slam-word.long{font-size:clamp(24px,8.2vw,62px)}
 </style>
 </head>
 <body>
@@ -612,16 +613,81 @@ function tone(f,d,type='sine',at=0,vol=.08,to=null){
   }catch(e){}
 }
 const buzz=p=>{try{if(snd&&navigator.vibrate)navigator.vibrate(p)}catch(e){}};
+/* ---------- cricket sound engine: everything is synthesised, no audio files ---------- */
+function actx(){
+  const c=beep.c||(beep.c=new (window.AudioContext||window.webkitAudioContext)());
+  if(c.state==='suspended')c.resume();
+  if(!actx.m){const comp=c.createDynamicsCompressor(),mg=c.createGain();mg.gain.value=.9;mg.connect(comp);comp.connect(c.destination);actx.m=mg}   // shared master so layered sounds never clip
+  return c;
+}
+function noiseBuf(c){
+  if(!noiseBuf.b){const n=c.sampleRate*2,b=c.createBuffer(1,n,c.sampleRate),d=b.getChannelData(0);for(let i=0;i<n;i++)d[i]=Math.random()*2-1;noiseBuf.b=b}
+  return noiseBuf.b;
+}
+// A short burst of filtered noise: the building block for cracks, clatter and claps.
+function nz(at,dur,o={}){
+  if(!snd)return;
+  const {type='bandpass',f=1000,to=null,q=1,vol=.2,atk=.005}=o;
+  try{
+    const c=actx(),t=c.currentTime+at,s=c.createBufferSource(),fl=c.createBiquadFilter(),g=c.createGain();
+    s.buffer=noiseBuf(c);s.loop=true;fl.type=type;fl.frequency.setValueAtTime(f,t);if(to)fl.frequency.exponentialRampToValueAtTime(to,t+dur);fl.Q.value=q;
+    g.gain.setValueAtTime(.0001,t);g.gain.exponentialRampToValueAtTime(vol,t+atk);g.gain.exponentialRampToValueAtTime(.0001,t+dur);
+    s.connect(fl);fl.connect(g);g.connect(actx.m);s.start(t,Math.random());s.stop(t+dur+.05);
+  }catch(e){}
+}
+// Crowd roar: three bands of noise with a flutter so it sounds like many people.
+function cheer(at,dur,vol){
+  if(!snd)return;
+  try{
+    const c=actx(),t=c.currentTime+at;
+    [[700,.9],[1500,1.1],[2800,.6]].forEach(([f,w])=>{
+      const s=c.createBufferSource(),fl=c.createBiquadFilter(),g=c.createGain();
+      s.buffer=noiseBuf(c);s.loop=true;fl.type='bandpass';fl.frequency.value=f*(.9+Math.random()*.2);fl.Q.value=.7;
+      g.gain.setValueAtTime(.0001,t);g.gain.linearRampToValueAtTime(vol*w,t+.25);
+      for(let x=.3;x<dur-.3;x+=.09)g.gain.linearRampToValueAtTime(vol*w*(.65+Math.random()*.55),t+x);
+      g.gain.linearRampToValueAtTime(.0001,t+dur);
+      s.connect(fl);fl.connect(g);g.connect(actx.m);s.start(t,Math.random());s.stop(t+dur+.05);
+    });
+  }catch(e){}
+}
+const HIT=.45;   // seconds: the moment the two hands clash, so sounds land on the visual
+function batCrack(big){nz(HIT,.05,{f:big?1500:2000,q:1.2,vol:big?.6:.4,atk:.002});tone(big?170:230,.09,'sine',HIT,big?.22:.15,90)}
 const SFX={
   reveal:()=>{tone(180,.09,'square',0,.05,90);tone(520,.06,'triangle',.02,.04);buzz(14)},
-  run:()=>tone(440,.14,'triangle',.12),
-  four:()=>{[523,659,784].forEach((f,i)=>tone(f,.16,'triangle',.12+i*.07,.08));buzz([22,30,22])},
-  six:()=>{[523,659,784,1047].forEach((f,i)=>tone(f,.2,'triangle',.12+i*.07,.09));tone(1047,.5,'sine',.42,.06);buzz([30,40,30,40,60])},
-  wicket:()=>{tone(300,.45,'sawtooth',.12,.08,70);tone(90,.35,'square',.12,.07,50);buzz([40,40,90])},
+  run:()=>batCrack(false),
+  four:()=>{batCrack(true);cheer(HIT+.1,1.3,.3);buzz([22,30,22])},
+  six:()=>{batCrack(true);cheer(HIT+.1,2.1,.42);buzz([30,40,30,40,60])},
+  // wicket sounds, chosen by the number both players showed
+  stumps:()=>{   // 1-5 matched: ball hits timber, bails rattle
+    nz(HIT,.06,{f:3200,q:.8,vol:.55,atk:.002});tone(200,.12,'sine',HIT,.2,80);
+    [.07,.13,.2,.29,.4].forEach(d=>{nz(HIT+d,.05,{f:2400+Math.random()*2200,q:6,vol:.18,atk:.002});tone(1500+Math.random()*1800,.05,'square',HIT+d,.03)});
+    setTimeout(()=>buzz([40,40,90]),HIT*1000);
+  },
+  catchOut:()=>{   // 6 matched: a crowd appeal, "Aaah, catch!"
+    setTimeout(()=>buzz([30,30,30,30,80]),HIT*1000);
+    if(!snd)return;
+    try{
+      const c=actx(),t=c.currentTime+HIT;
+      for(let i=0;i<6;i++){
+        const o=c.createOscillator(),fl=c.createBiquadFilter(),g=c.createGain(),lf=c.createOscillator(),lg=c.createGain(),f0=420+Math.random()*180;
+        o.type='sawtooth';o.frequency.setValueAtTime(f0,t+i*.012);o.frequency.exponentialRampToValueAtTime(f0*1.7,t+.35);o.frequency.exponentialRampToValueAtTime(f0*1.35,t+1);
+        lf.frequency.value=6+Math.random()*3;lg.gain.value=14;lf.connect(lg);lg.connect(o.frequency);
+        fl.type='bandpass';fl.frequency.setValueAtTime(900,t);fl.frequency.exponentialRampToValueAtTime(1800,t+.4);fl.Q.value=1.4;
+        g.gain.setValueAtTime(.0001,t);g.gain.exponentialRampToValueAtTime(.09,t+.08);g.gain.setValueAtTime(.09,t+.5);g.gain.exponentialRampToValueAtTime(.0001,t+1.05);
+        o.connect(fl);fl.connect(g);g.connect(actx.m);o.start(t);o.stop(t+1.1);lf.start(t);lf.stop(t+1.1);
+      }
+    }catch(e){}
+    nz(HIT,1,{f:1400,to:2200,q:.9,vol:.25,atk:.06});
+  },
+  crowdHappy:()=>{cheer(HIT,1.8,.4);setTimeout(()=>buzz([20,30,20]),HIT*1000)},   // 0 matched: happy crowd noise
+  applause:()=>{   // 50 / 100 milestones
+    buzz([20,30,20,30,20]);if(!snd)return;
+    for(let i=0;i<110;i++){const t=Math.random()*2.2,env=Math.min(1,t/.3)*(t>1.6?(2.2-t)/.6:1);nz(t,.03+Math.random()*.03,{f:1800+Math.random()*3200,q:.8,vol:.35*env+.02,atk:.002})}
+    cheer(0,2.3,.22);
+  },
   reviewWin:()=>{[392,523,659,784].forEach((f,i)=>tone(f,.18,'sine',i*.09,.09));buzz([18,30,18,30,40])},
   reviewLoss:()=>{tone(330,.28,'sawtooth',0,.08,200);tone(220,.4,'sawtooth',.2,.08,110);tone(70,.5,'square',.2,.06);buzz([70,40,120])}
 };
-SFX.milestone=()=>{[784,988,1175,1568,1976].forEach((f,i)=>tone(f,.22,'sine',i*.07,.07));buzz([20,30,20,30,20])};
 const sfx=n=>emit('sfx',n);   // plays here and, when hosting, on every player's device
 const rnd=a=>a[Math.floor(Math.random()*a.length)];
 const say=(a,o)=>rnd(a).replace(/\{(\w)\}/g,(_,k)=>o[k]);
@@ -674,7 +740,7 @@ function reveal(){
   else{runs=B;msg=say(RUN[B],o)}
   if(runs>=4)cls='b';
   if(out){
-    emit('slam',String(bowl()),B===0?'DOUBLE FIST!':rnd(SLAMS));sfx('thud');
+    emit('slam',String(bowl()),outWord(B));sfx(B===6?'catchOut':B===0?'crowdHappy':'stumps');
     S.pendingOut={B,W,msg:say(B===0?DF:OUT,o),cls:'o',batterName:playerLabel(bat()),bowlerName:playerLabel(bowl())};S.reviewing=bat();S.state='reviewOffer';S.reviewId++;S.reviewDeadline=Date.now()+3000;
     // The host is authoritative: an unanswered review expires after 3 seconds,
     // even if the batter's browser disconnects or never sends a choice.
@@ -711,7 +777,7 @@ function finalizeOut(viaReview){
   S.mode='game';S.pendingOut=null;S.reviewing=null;S.reviewDeadline=0;buildKeys();S.balls[b]++;S.wickets[b]++;addBatting(0,true);addBowlerFigure(0,true);pushDot('W');
   if(teamMode()){const batters=teamPlayers(b);if(batters.length>1){const i=batters.findIndex(x=>x.id===S.activeBat);S.activeBat=batters[(i+1)%batters.length].id}}
   showImpact(bowl(),'OUT!','out');timers.push(setTimeout(()=>animateHand(bowl(),'out-pop'),100));
-  appendBallLog(p.msg,'o');flash('out');sfx(viaReview?'reviewLoss':'wicket');if(viaReview)emit('ump','OUT — decision stands','bad');render();showReviewStatus();
+  appendBallLog(p.msg,'o');flash('out');if(viaReview)sfx('reviewLoss');if(viaReview)emit('ump','OUT — decision stands','bad');render();showReviewStatus();
   if(teamMode()&&teamPlayers(b).length>1&&S.wickets[b]<S.maxWickets){beginStrategy('nextBatter',b,'bat');return}
   finishBall();
 }
@@ -860,12 +926,20 @@ function beginMatchCountdown(){
   },5050));
 }
 function flash(c){if(!c)return;emit('fl',c)}
-const SLAMS=['BOWLED!','CLEAN BOWLED!','CAUGHT!','STUMPED!','LBW!','OUT!'];
+// The out banner depends on the number both players showed.
+function outWord(B){
+  if(B===1||B===2)return rnd(['EDGED!','BOWLED!']);
+  if(B===3)return 'RUN OUT!';
+  if(B===4)return 'BOWLED ’EM!';
+  if(B===6)return 'CAUGHT OUT!';
+  if(B===0)return 'OUT! HIT WICKET!';
+  return 'LBW!';   // 5 was not specified
+}
 SFX.thud=()=>{tone(110,.3,'square',.4,.09,45);buzz([35,25,70])};
 function doSlam(p,word){
   const hb=$('h'+p);hb.classList.remove('slam');void hb.offsetWidth;hb.classList.add('slam');setTimeout(()=>hb.classList.remove('slam'),800);
   const f=$('flash');f.className='flash';void f.offsetWidth;f.className='flash dip';
-  const w=$('slamWord');w.textContent=word;w.classList.remove('show');void w.offsetWidth;w.classList.add('show');
+  const w=$('slamWord');w.textContent=word;w.classList.toggle('long',word.length>10);w.classList.remove('show');void w.offsetWidth;w.classList.add('show');
   const st=$('stage');st.classList.remove('shake-s','shake-l');void st.offsetWidth;st.classList.add('shake-s');setTimeout(()=>st.classList.remove('shake-s'),600);
 }
 // Each team's cuff colour tints its pad, and the scoreboard takes the colour of whoever is batting.
@@ -909,8 +983,8 @@ function showMilestone(title,detail){
   let h='';for(let i=0;i<26;i++)h+=`<i style="left:${Math.random()*100}%;top:${Math.random()*100}%;--s:${8+Math.random()*16}px;--d:${.8+Math.random()*.9}s;--l:${Math.random()*1.2}s"></i>`;
   $('msSpark').innerHTML=h;
   m.classList.remove('show');void m.offsetWidth;m.classList.add('show');
-  SFX.milestone();
-  clearTimeout(msTimer);msTimer=setTimeout(()=>m.classList.remove('show'),3100);
+  SFX.applause();
+  clearTimeout(msTimer);msTimer=setTimeout(()=>m.classList.remove('show'),2300);
 }
 function confetti(n,pal){
   pal=pal||['#e3ab3c','#d0392f','#3e9c57','#3789cf','#9d56b8','#ffffff'];
@@ -1256,7 +1330,7 @@ function tossView(show,title){
   $('tossOv').classList.toggle('show',show);
 }
 function menu(){
-  modal('Hand Cricket',`<div class="menu-hero"><span class="mh l">${hand(0,SKIN[0],'#15191f')}</span><span class="mh r">${hand(5,SKIN[1],'#15191f')}</span></div><div class="menu-tag">Rock-paper-scissors rules. Cricket glory.</div>`,[
+  modal('Hand Cricket',`<div class="menu-hero"><span class="mh l">${hand(0,SKIN[0],'#15191f')}</span><span class="mh r">${hand(5,SKIN[1],'#15191f')}</span></div><div class="menu-tag">Let's Make Those Fists Talk with Hand Cricket!.</div>`,[
     ['🤖  Play vs AI|Warm up solo against the computer',()=>{unmodal();ai=true;net.role='solo';applyRole();askName(0,()=>askMatchSetup(()=>{setName(1,'🤖 AI');beginCuffSetup()}))}],
     ['🌐  Create an online room|Host a match and invite your friends',()=>{unmodal();ai=false;askName(0,()=>askMatchSetup(host,true))}],
     ['🔗  Join with a room code|Got a code? Jump straight in',joinUI]]);
