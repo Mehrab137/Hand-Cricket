@@ -91,6 +91,62 @@ h1 span{color:var(--leather)}
 .cuff-name{font:700 18px var(--body);color:var(--bone);min-height:26px}.cuff-nav{display:flex;gap:8px;margin-top:14px}.cuff-nav .go{width:50%;padding:10px}.cuff-skip{font:600 13px var(--body);background:none;border:0;color:var(--muted);cursor:pointer;padding:12px;text-decoration:underline}
 .slots{display:grid;grid-template-columns:1fr 1fr;gap:10px;text-align:center}.slot{background:rgba(0,0,0,.22);border:1px solid var(--line);border-radius:12px;padding:10px;min-width:0}.slot small{display:block;color:var(--muted);letter-spacing:.1em;font-size:10px}.slot b{display:block;margin:2px 0 4px;font-size:16px}.slot .hand{width:64px;margin:4px auto}.lp{padding:5px 0;border-top:1px solid var(--line);font-size:14px;color:var(--bone)}.swatches{display:flex;flex-wrap:wrap;gap:8px;margin-top:6px}.swatches button{width:34px;height:34px;border-radius:50%;border:3px solid transparent;cursor:pointer;background:var(--cc)}.swatches button.on{border-color:var(--bone)}.swatches button:disabled{opacity:.25;cursor:not-allowed}
 .card tr.sp td{padding:10px;border:0}
+/* ---------- visual polish ---------- */
+.chip{transition:transform .12s,background .15s}.chip:hover{transform:translateY(-1px);background:var(--panel2)}.chip[aria-pressed=true]:hover{background:#f0bc52}
+.go{background:linear-gradient(180deg,#e24c42,#b52f27);box-shadow:0 4px 0 #7d1d18,0 9px 16px rgba(0,0,0,.3);transition:transform .1s,box-shadow .1s}
+.go:hover:not(:disabled){transform:translateY(-1px)}.go:active:not(:disabled){transform:translateY(3px);box-shadow:0 1px 0 #7d1d18}
+.go.sec{background:var(--panel2);box-shadow:0 3px 0 #0b1118}.go:disabled{box-shadow:none}
+.pad{background:linear-gradient(160deg,#1c2733,#141c26);box-shadow:0 10px 20px rgba(0,0,0,.28)}
+.hintline{margin-top:8px;font:700 12px var(--body);color:#ffe9a8;min-height:16px;line-height:1.25}
+.tick{animation:tick .55s cubic-bezier(.2,1.6,.4,1)}@keyframes tick{0%{transform:scale(1)}40%{transform:scale(1.28);color:var(--brass)}100%{transform:scale(1)}}
+/* number pad: staggered "honeycomb" of gesture keys instead of one straight line */
+.keys.n7{grid-template-columns:repeat(8,1fr);gap:9px 6px;padding:2px 2px 8px}
+.keys.n7 button{grid-column:span 2;display:flex;flex-direction:column;align-items:center;gap:2px;padding:8px 0 6px;border-radius:20px;overflow:hidden;
+ background:radial-gradient(circle at 50% 0,color-mix(in srgb,var(--c) 36%,#2c3a4a),#1a2430 80%);border:2px solid color-mix(in srgb,var(--c) 55%,#243040);border-bottom:5px solid color-mix(in srgb,var(--c) 72%,#000);box-shadow:0 5px 10px rgba(0,0,0,.3),inset 0 1px 0 rgba(255,255,255,.18)}
+.keys.n7 button[data-n="5"]{grid-column:2/span 2}.keys.n7 button[data-n="0"]{order:7;--c:#9aa7b6}
+.keys.n7 button[data-n="1"],.keys.n7 button[data-n="3"],.keys.n7 button[data-n="5"]{rotate:-2deg}
+.keys.n7 button[data-n="2"],.keys.n7 button[data-n="4"],.keys.n7 button[data-n="6"]{rotate:2deg}
+.keys.n7 button[data-n="4"]{--c:#4fa3ff}.keys.n7 button[data-n="6"]{--c:#e3ab3c}
+.keys.n7 button:hover:not(:disabled){transform:translateY(-4px) scale(1.06);rotate:0deg}
+.keys.n7 .bi{display:block;line-height:0}.keys.n7 .bi .hand{width:40px;margin:0 auto;filter:drop-shadow(0 3px 3px rgba(0,0,0,.4))}
+.keys.n7 .bn{font:900 21px var(--head);line-height:1;text-shadow:0 2px 0 rgba(0,0,0,.4)}
+.keys.t3 button{border-radius:18px;padding:12px 0 10px;border-width:2px;background:radial-gradient(circle at 50% 0,color-mix(in srgb,var(--c) 34%,#2c3a4a),#1a2430 80%);box-shadow:0 5px 10px rgba(0,0,0,.3)}
+.keys.t3 button:nth-child(1){rotate:-2deg}.keys.t3 button:nth-child(3){rotate:2deg}.keys.t3 button:hover:not(:disabled){rotate:0deg;transform:translateY(-4px) scale(1.05)}
+/* chase row + this-over dots */
+.chase{order:1;margin:-2px 0 12px;padding:10px 14px;border-radius:14px;background:linear-gradient(120deg,rgba(7,19,29,.92),rgba(16,41,29,.92));border:1px solid rgba(210,235,243,.22);box-shadow:0 8px 18px rgba(0,0,0,.25);display:none}
+.chase.show{display:block}.chase-top{display:flex;justify-content:space-between;align-items:baseline;gap:4px 12px;flex-wrap:wrap;font-weight:800;font-size:16px}
+.chase-top .rate{color:var(--brass);font-size:12px;font-weight:700}
+.chase-bar{height:9px;border-radius:6px;background:rgba(255,255,255,.1);overflow:hidden;margin:8px 0}
+.chase-bar i{display:block;height:100%;width:0;border-radius:6px;background:linear-gradient(90deg,#3e9c57,#e3ab3c);transition:width .7s cubic-bezier(.2,.8,.2,1)}
+.dots{display:flex;gap:7px;align-items:center;flex-wrap:wrap}.dots small{color:#aebdca;font-size:10px;letter-spacing:.1em;text-transform:uppercase;margin-right:4px}
+.dots span{width:28px;height:28px;border-radius:50%;display:grid;place-items:center;font:800 13px var(--body);background:rgba(255,255,255,.1);color:var(--bone);border:1px solid rgba(255,255,255,.2);animation:dotin .4s cubic-bezier(.2,1.7,.4,1)}
+.dots span.r4{background:#2d6cdf;border-color:#8bbcff}.dots span.r6{background:var(--brass);color:#1a1405;border-color:#fff1b8}.dots span.w{background:var(--leather);color:#fff;border-color:#ff9a92}.dots span.dot{opacity:.6}.dots span.e{background:transparent;border-style:dashed;opacity:.35;animation:none}
+@keyframes dotin{0%{transform:scale(.2);opacity:0}100%{transform:scale(1);opacity:1}}
+/* milestone banner + sparkles */
+.ms{position:fixed;left:0;right:0;top:calc(13% + env(safe-area-inset-top,0px));display:flex;justify-content:center;pointer-events:none;z-index:30;opacity:0;visibility:hidden;padding:0 14px}
+.ms.show{visibility:visible;animation:msIn 3s cubic-bezier(.2,1.2,.3,1) forwards}
+.ms-card{position:relative;padding:18px 36px;border-radius:22px;text-align:center;max-width:min(94vw,540px);background:linear-gradient(135deg,#4a3206,#9a6a0e 45%,#e8b43f);border:2px solid #fff3c4;box-shadow:0 0 0 5px rgba(227,171,60,.28),0 18px 50px rgba(0,0,0,.55),0 0 70px rgba(255,214,102,.6)}
+.ms.team .ms-card{background:linear-gradient(135deg,#0b2848,#1c5da3 50%,#62b6ff);border-color:#d8f0ff;box-shadow:0 0 0 5px rgba(98,182,255,.28),0 18px 50px rgba(0,0,0,.55),0 0 70px rgba(98,182,255,.6)}
+.ms-title{font:clamp(32px,9vw,60px)/1 var(--head);color:#fff;text-shadow:0 3px 0 rgba(40,25,0,.55);letter-spacing:1px}
+.ms-detail{margin-top:7px;font:700 clamp(13px,3.4vw,17px) var(--body);color:#fff8de}
+@keyframes msIn{0%{opacity:0;transform:translateY(-34px) scale(.45)}12%{opacity:1;transform:translateY(0) scale(1.09)}20%{transform:scale(1)}85%{opacity:1;transform:scale(1)}100%{opacity:0;transform:translateY(-18px) scale(.96)}}
+.sparks{position:absolute;inset:-28px;pointer-events:none}
+.sparks i{position:absolute;width:var(--s);height:var(--s);background:#fffbe0;clip-path:polygon(50% 0,62% 38%,100% 50%,62% 62%,50% 100%,38% 62%,0 50%,38% 38%);opacity:0;filter:drop-shadow(0 0 5px #ffd45f);animation:twinkle var(--d) ease-in-out var(--l) infinite}
+@keyframes twinkle{0%,100%{opacity:0;transform:scale(.2) rotate(0)}50%{opacity:1;transform:scale(1) rotate(90deg)}}
+/* confetti + screen shake */
+.confetti{position:fixed;inset:0;pointer-events:none;overflow:hidden;z-index:40}
+.confetti i{position:absolute;top:-16px;background:var(--c);border-radius:2px;animation:fall var(--t) linear var(--l) forwards}
+@keyframes fall{to{transform:translateY(112vh) rotate(var(--r))}}
+.shake-s{animation:shk .5s}.shake-l{animation:shk2 .32s}
+@keyframes shk{0%,100%{transform:translate(0)}15%{transform:translate(-8px,3px) rotate(-.5deg)}30%{transform:translate(7px,-4px) rotate(.5deg)}45%{transform:translate(-6px,2px)}60%{transform:translate(4px,-2px)}80%{transform:translate(-2px,1px)}}
+@keyframes shk2{0%,100%{transform:translate(0)}25%{transform:translate(-3px,1px)}50%{transform:translate(3px,-1px)}75%{transform:translate(-1px,1px)}}
+/* ? rules chart */
+.help-card{max-width:540px;max-height:92vh;overflow:auto;text-align:left}.help-card h2{text-align:center}
+.help-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:12px 0}.hg{background:rgba(255,255,255,.05);border:1px solid var(--line);border-radius:14px;padding:8px 4px;text-align:center}
+.hg .hand{width:52px;margin:0 auto}.hg b{display:block;font:900 22px var(--head);margin-top:2px}.hg small{display:block;color:var(--muted);font-size:11px;line-height:1.2}
+.help-rules{font-size:14px;line-height:1.45;color:#cbd7df;margin-bottom:14px}.help-rules p{margin:6px 0}.help-rules b{color:var(--brass)}
+@media(max-width:640px){.help-grid{grid-template-columns:repeat(4,1fr)}.hg .hand{width:44px}}
+@media(prefers-reduced-motion:reduce){.ms.show,.sparks i,.confetti i,.shake-s,.shake-l,.dots span,.tick{animation-duration:.01s!important}.confetti{display:none}}
 </style>
 </head>
 <body>
@@ -98,6 +154,7 @@ h1 span{color:var(--leather)}
 <header>
  <h1>Hand <span>Cricket</span></h1>
  <div class="tg">
+  <button class="chip" id="helpT">? Rules</button>
   <button class="chip" id="aiT" aria-pressed="false">Player 2: human</button>
   <button class="chip" id="sndT" aria-pressed="true">Sound on</button>
   <button class="chip" id="endRoom" style="display:none">End room</button>
@@ -117,12 +174,15 @@ h1 span{color:var(--leather)}
  </div>
 </section>
 
+<section class="chase" id="chase" aria-live="polite"><div class="chase-top"><span id="chaseTxt"></span><span class="rate" id="chaseRate"></span></div><div class="chase-bar"><i id="chaseFill"></i></div><div class="dots" id="dots"></div></section>
+
 <section class="stage" id="stage">
  <div class="side"><div class="role" id="r0"></div><div class="hand-box" id="h0"></div><div class="impact" id="fx0" aria-live="polite"></div><div class="num" id="n0"></div></div>
  <div class="mid">
   <div class="count" id="count">Ready</div>
   <div class="bar" id="bar"><i></i></div>
   <button class="go" id="go">Bowl first ball</button>
+  <div class="hintline" id="hintLine"></div>
  </div>
  <div class="side"><div class="role" id="r1"></div><div class="hand-box" id="h1"></div><div class="impact" id="fx1" aria-live="polite"></div><div class="num" id="n1"></div></div>
  <div class="flash" id="flash"></div>
@@ -136,6 +196,9 @@ h1 span{color:var(--leather)}
 <section class="log"><h3>Ball by ball</h3><div id="log"><p class="t">Press Space or the button to bowl. Picks stay hidden until the reveal.</p></div></section>
 </div>
 
+<div class="ms" id="ms" aria-live="polite"><div class="ms-card"><div class="sparks" id="msSpark"></div><div class="ms-title" id="msTitle"></div><div class="ms-detail" id="msDetail"></div></div></div>
+<div class="confetti" id="confetti" aria-hidden="true"></div>
+<div class="ov" id="helpOv"><div class="card help-card" role="dialog" aria-modal="true" aria-labelledby="helpTitle"><h2 id="helpTitle">How to play</h2><div class="help-grid" id="helpGrid"></div><div class="help-rules" id="helpRules"></div><button class="go" id="helpClose">Got it</button></div></div>
 <div class="ov" id="tossOv"><div class="card" role="dialog" aria-modal="true" aria-labelledby="tossT"><h2 id="tossT"></h2><div style="color:var(--muted);margin-bottom:16px" id="tossSub">Choose how to start the match.</div><div style="display:flex;gap:10px" id="tossBtns"><button class="go" id="cBat">Bat first</button><button class="go" id="cBowl">Bowl first</button></div></div></div>
 <div class="ov" id="ov"><div class="card" role="dialog" aria-modal="true" aria-labelledby="wt">
  <h2 id="wt"></h2><div id="ws" style="color:var(--muted)"></div>
@@ -197,9 +260,9 @@ function hand(n,skin,cuff='#15191f'){
 
 function reset(){
   timers.forEach(clearTimeout);timers=[];
-  const oldCuffs=S&&S.cuffs?S.cuffs:['#15191f','#15191f'],oldSet=S&&S.cuffSet?S.cuffSet:[false,false];
+  const oldCuffs=S&&S.cuffs?S.cuffs:['#15191f','#15191f'],oldSet=S&&S.cuffSet?S.cuffSet:[false,false],oldEv=S&&S.evId||0;
   const oldOvers=S&&S.maxOvers||1,oldWickets=S&&S.maxWickets||1;
-  S={inn:1,score:0,target:null,state:'idle',mode:'toss',first:0,tw:0,tossChoice:'',matchStartAt:0,bk:0,pick:[null,null],balls:[0,0],runs:[0,0],wickets:[0,0],reviews:[1,1],maxOvers:oldOvers,maxWickets:oldWickets,reviewing:null,reviewId:0,pendingOut:null,reviewDeadline:0,noticeId:0,noticeTitle:'',noticeDetail:'',noticeUntil:0,resultPhase:0,resultTitle:'',resultDetail:'',players:null,connected:{},activeBat:null,activeBowl:null,figures:{},batting:{},strategy:null,strategyId:'',syncRevision:0,log:[],intro:0,tossStarted:false,cuffs:oldCuffs,cuffSet:oldSet,themeReady:[true,true],themePrompt:false};
+  S={inn:1,score:0,target:null,state:'idle',mode:'toss',first:0,tw:0,tossChoice:'',matchStartAt:0,bk:0,pick:[null,null],balls:[0,0],runs:[0,0],wickets:[0,0],reviews:[1,1],maxOvers:oldOvers,maxWickets:oldWickets,reviewing:null,reviewId:0,pendingOut:null,reviewDeadline:0,noticeId:0,noticeTitle:'',noticeDetail:'',noticeUntil:0,resultPhase:0,resultTitle:'',resultDetail:'',players:null,connected:{},activeBat:null,activeBowl:null,figures:{},batting:{},strategy:null,strategyId:'',syncRevision:0,log:[],intro:0,tossStarted:false,cuffs:oldCuffs,cuffSet:oldSet,dots:[],evq:[],evId:oldEv,themeReady:[true,true],themePrompt:false};
   $('ov').classList.remove('show');$('winOv').classList.remove('show');$('matchOv').classList.remove('show');$('reviewOv').classList.remove('show');$('strategyOv').classList.remove('show');$('tossOv').classList.remove('show');showTossIntro(0);clearImpacts();buildKeys();
   $('log').innerHTML='<p class="t">Play rock paper scissors to decide the toss. Picks stay hidden until the reveal.</p>';
   $('count').textContent='Ready';
@@ -259,6 +322,8 @@ function render(){
   const lobbyReady=S.mode==='lobby'&&lobbyStatus().ok;
   $('go').disabled=(S.mode==='lobby'?!lobbyReady||net.role!=='host':S.state==='pick'||S.state==='strategy'||S.state==='over'||S.state==='choose'||S.state==='intro'||S.state==='reviewOffer'||now()<S.noticeUntil||!canControlSide(bowl()));
   document.querySelectorAll('.keys button').forEach(x=>x.disabled=S.state!=='pick'||(ai&&x.dataset.p==='1')||!canControlSide(+x.dataset.p));
+  if(net.lastScore!==S.score){net.lastScore=S.score;const el=$('sScore');el.classList.remove('tick');void el.offsetWidth;el.classList.add('tick')}
+  try{renderChase();renderHint()}catch(e){}
 }
 function showHands(a,b,anim,cls){
   const cuffs=S&&S.cuffs?S.cuffs:['#15191f','#15191f'];
@@ -356,7 +421,8 @@ const SFX={
   reviewWin:()=>{[392,523,659,784].forEach((f,i)=>tone(f,.18,'sine',i*.09,.09));buzz([18,30,18,30,40])},
   reviewLoss:()=>{tone(330,.28,'sawtooth',0,.08,200);tone(220,.4,'sawtooth',.2,.08,110);tone(70,.5,'square',.2,.06);buzz([70,40,120])}
 };
-const sfx=n=>SFX[n]&&SFX[n]();
+SFX.milestone=()=>{[784,988,1175,1568,1976].forEach((f,i)=>tone(f,.22,'sine',i*.07,.07));buzz([20,30,20,30,20])};
+const sfx=n=>emit('sfx',n);   // plays here and, when hosting, on every player's device
 const rnd=a=>a[Math.floor(Math.random()*a.length)];
 const say=(a,o)=>rnd(a).replace(/\{(\w)\}/g,(_,k)=>o[k]);
 const OUT=['OUT! {w} read {b} like a bad poem. Both showed {B}!','Twin {B}s! {b} and {w} had the same idea, and only one gets to keep the bat.','{b} walks back muttering about psychic bowlers.','Timber! {b} fell for the oldest trick: thinking like a {B}.','That is out. {w} celebrates like they just won the lottery.','{b}’s wicket falls to a sad little trombone. Both on {B}.','Same number, big drama. {b} is out and the umpire is not sorry.','{w} stared into {b}’s soul and found a {B}. Out!'];
@@ -415,13 +481,13 @@ function reveal(){
     render();showReviewStatus();maybePromptReview();return;
   }
   showImpact(bat(),'+'+runs,'run');timers.push(setTimeout(()=>animateHand(bat(),'score-pop'),100));
-  S.score+=runs;S.runs[bat()]=S.score;S.balls[bat()]++;addBatting(runs);addBowlerFigure(runs);
+  S.score+=runs;S.runs[bat()]=S.score;S.balls[bat()]++;addBatting(runs);addBowlerFigure(runs);pushDot(String(runs));checkMilestones(runs);
   const n=S.balls[bat()];
   const log=document.createElement('p');log.className=cls;
   log.textContent=`Inn ${S.inn} · ball ${n} · ${B} v ${W}: ${msg} (${S.score})`;
   if(S.log.length===0)$('log').innerHTML='';
   S.log.push(1);$('log').prepend(log);
-  flash(runs>=4?'big':'');
+  flash(runs>=6?'six':runs>=4?'big':'');
   sfx(runs>=6?'six':runs>=4?'four':'run');
   render();
   finishBall();
@@ -441,7 +507,7 @@ function appendBallLog(msg,cls='t'){
 }
 function finalizeOut(viaReview){
   const b=bat(),p=S.pendingOut;if(!p)return;
-  S.mode='game';S.pendingOut=null;S.reviewing=null;S.reviewDeadline=0;buildKeys();S.balls[b]++;S.wickets[b]++;addBatting(0,true);addBowlerFigure(0,true);
+  S.mode='game';S.pendingOut=null;S.reviewing=null;S.reviewDeadline=0;buildKeys();S.balls[b]++;S.wickets[b]++;addBatting(0,true);addBowlerFigure(0,true);pushDot('W');
   if(teamMode()){const batters=teamPlayers(b);if(batters.length>1){const i=batters.findIndex(x=>x.id===S.activeBat);S.activeBat=batters[(i+1)%batters.length].id}}
   showImpact(bowl(),'OUT!','out');timers.push(setTimeout(()=>animateHand(bowl(),'out-pop'),100));
   appendBallLog(p.msg,'o');flash('out');sfx(viaReview?'reviewLoss':'wicket');render();showReviewStatus();
@@ -449,7 +515,7 @@ function finalizeOut(viaReview){
   finishBall();
 }
 function surviveReview(){
-  const b=bat();S.mode='game';S.pendingOut=null;S.reviewing=null;S.reviewDeadline=0;buildKeys();S.balls[b]++;addBatting();addBowlerFigure();
+  const b=bat();S.mode='game';S.pendingOut=null;S.reviewing=null;S.reviewDeadline=0;buildKeys();S.balls[b]++;addBatting();addBowlerFigure();pushDot('•');
   showImpact(b,'NOT OUT!','notout');timers.push(setTimeout(()=>animateHand(b,'score-pop'),100));
   appendBallLog(`${playerLabel(b)} wins the review — not out.`,'b');sfx('reviewWin');render();showReviewStatus();finishBall();
 }
@@ -585,7 +651,106 @@ function beginMatchCountdown(){
     startBall();publishState();
   },5050));
 }
-function flash(c){if(!c)return;const f=$('flash');f.className='flash';void f.offsetWidth;f.className='flash '+c}
+function flash(c){if(!c)return;emit('fl',c)}
+/* ---------- visual events: the host emits, every device plays them ---------- */
+function emit(k,a,b){
+  const e={id:(S.evId=(S.evId||0)+1),k,a:a||'',b:b||''};
+  S.evq=(Array.isArray(S.evq)?S.evq:[]).concat([e]).slice(-8);
+  try{playEv(e)}catch(x){}
+}
+function playEv(e){
+  if(e.k==='sfx'){SFX[e.a]&&SFX[e.a]()}
+  else if(e.k==='fl')doFlash(e.a);
+  else if(e.k==='ms')showMilestone(e.a,e.b);
+  else if(e.k==='win')confetti(110);
+}
+function doFlash(c){
+  const f=$('flash');f.className='flash';void f.offsetWidth;f.className='flash '+(c==='six'?'big':c);
+  const st=$('stage');st.classList.remove('shake-s','shake-l');void st.offsetWidth;
+  st.classList.add(c==='big'?'shake-l':'shake-s');
+  setTimeout(()=>st.classList.remove('shake-s','shake-l'),600);
+  if(c==='six')confetti(34,['#ffd45f','#fff4c0','#ffb02e']);
+}
+let msTimer=0;
+function showMilestone(title,detail){
+  const m=$('ms');$('msTitle').textContent=title;$('msDetail').textContent=detail||'';
+  m.classList.toggle('team',/^TEAM/.test(title));
+  let h='';for(let i=0;i<26;i++)h+=`<i style="left:${Math.random()*100}%;top:${Math.random()*100}%;--s:${8+Math.random()*16}px;--d:${.8+Math.random()*.9}s;--l:${Math.random()*1.2}s"></i>`;
+  $('msSpark').innerHTML=h;
+  m.classList.remove('show');void m.offsetWidth;m.classList.add('show');
+  SFX.milestone();
+  clearTimeout(msTimer);msTimer=setTimeout(()=>m.classList.remove('show'),3100);
+}
+function confetti(n,pal){
+  pal=pal||['#e3ab3c','#d0392f','#3e9c57','#3789cf','#9d56b8','#ffffff'];
+  let h='';for(let i=0;i<n;i++)h+=`<i style="left:${Math.random()*100}%;--c:${pal[i%pal.length]};--t:${2.2+Math.random()*2}s;--l:${Math.random()*.8}s;--r:${(Math.random()*900-450)|0}deg;width:${6+Math.random()*6}px;height:${9+Math.random()*9}px"></i>`;
+  $('confetti').insertAdjacentHTML('beforeend',h);
+  setTimeout(()=>{$('confetti').innerHTML=''},5400);
+}
+// Team 50/100/150/200 and player 50/100/150/200 banners.
+function checkMilestones(runs){
+  const before=S.score-runs,bk=batterKey(),pr=(S.batting&&S.batting[bk])?S.batting[bk].runs:0,pb=pr-runs;
+  const t=[50,100,150,200,250,300].find(m=>before<m&&S.score>=m),pm=[50,100,150,200].find(m=>pb<m&&pr>=m);
+  const who=playerLabel(bat()),word=m=>m===50?'FIFTY!':m===100?'CENTURY!':m+'!';
+  if(!teamMode()){if(t)emit('ms',word(t),`${who} reaches ${S.score}`);return}
+  const team=teamLabel(bat()),need=S.inn===2&&S.target!=null?` · ${Math.max(S.target-S.score,0)} to win`:'';
+  if(t&&pm)emit('ms','TEAM '+t+'!',`${team} is up to ${S.score}${need} — and ${who} makes ${pm===50?'a fifty':pm===100?'a hundred':pm}!`);
+  else if(t)emit('ms','TEAM '+t+'!',`${team} reaches ${S.score}${need}`);
+  else if(pm)emit('ms',word(pm),`${who} reaches ${pm} for ${team}`);
+}
+// Balls of the current over, shown as dots under the scoreboard.
+function pushDot(l){const n=S.balls[bat()];if(n%6===1||!Array.isArray(S.dots))S.dots=[];S.dots.push(l)}
+function renderChase(){
+  const el=$('chase');
+  if(S.mode==='toss'||S.mode==='lobby'||!S.balls){el.classList.remove('show');return}
+  const b=bat(),faced=S.balls[b]||0,total=S.maxOvers*6,left=Math.max(total-faced,0),wl=Math.max(S.maxWickets-(S.wickets[b]||0),0);
+  let txt,rate,fill;
+  if(S.inn===2&&S.target!=null){
+    const need=Math.max(S.target-S.score,0);
+    txt=need===0?'Target reached!':`Need ${need} from ${left} ball${left===1?'':'s'}`;
+    rate=need&&left?`Required ${(need*6/left).toFixed(1)}/over · ${wl} wkt${wl===1?'':'s'} left`:`${wl} wkt${wl===1?'':'s'} left`;
+    fill=S.target?Math.min(100,S.score/S.target*100):0;
+  }else{
+    txt=`${playerLabel(b)} is setting the target`;
+    rate=(faced?`Run rate ${(S.score*6/faced).toFixed(1)}/over · `:'')+`${left} ball${left===1?'':'s'} left`;
+    fill=total?faced/total*100:0;
+  }
+  $('chaseTxt').textContent=txt;$('chaseRate').textContent=rate;$('chaseFill').style.width=fill+'%';
+  const ds=Array.isArray(S.dots)?S.dots:Object.values(S.dots||{}),sig=ds.join(',')+'|'+faced,box=$('dots');
+  if(box.dataset.s!==sig){
+    box.dataset.s=sig;
+    const ov=ds.length?Math.floor((faced-1)/6)+1:Math.floor(faced/6)+1;
+    let h=`<small>Over ${Math.max(ov,1)}</small>`;
+    for(let i=0;i<6;i++){
+      if(i<ds.length){const l=ds[i],c=l==='W'?'w':l==='6'?'r6':(l==='4'||l==='5')?'r4':l==='•'?'dot':'';h+=`<span class="${c}">${l}</span>`}
+      else h+='<span class="e"></span>';
+    }
+    box.innerHTML=h;
+  }
+  el.classList.add('show');
+}
+// One short "what do I do now?" line for online players.
+function renderHint(){
+  const el=$('hintLine');let t='';
+  if(online()&&S.state==='pick'){
+    if(S.mode==='toss'||S.mode==='review')t=(canControlSide(0)||canControlSide(1))?'Rock, paper or scissors — pick now!':'Captains are playing…';
+    else t=canControlSide(bat())?'You’re batting — pick 0–6':canControlSide(bowl())?'You’re bowling — pick 0–6':'Watching this ball…';
+  }
+  if(el.textContent!==t)el.textContent=t;
+}
+function openHelp(){
+  if(!$('helpGrid').dataset.b){
+    const lab=['Fist','Index finger','Two fingers','Three fingers','Four, thumb tucked','Open palm','Thumb only'];
+    $('helpGrid').innerHTML=lab.map((l,n)=>`<div class="hg">${hand(n,SKIN[0],'#15191f')}<b>${n}</b><small>${l}</small></div>`).join('');
+    $('helpRules').innerHTML=`<p><b>Out:</b> both show the same number — including two fists.</p><p><b>Fist steal:</b> a batter showing 0 (fist) against a bowler’s N scores N runs.</p><p><b>Runs:</b> otherwise the batter scores the number they show.</p><p><b>Timer:</b> 3 seconds a ball. If you don’t pick, a random number is chosen.</p><p><b>Review:</b> each batter gets one. When out, win rock-paper-scissors to stay in.</p><p><b>Winning:</b> the chasing team wins the moment it reaches the target. Milestone banners pop up at 50 and 100 for players and teams.</p>`;
+    $('helpGrid').dataset.b=1;
+  }
+  $('helpOv').classList.add('show');$('helpClose').focus();
+}
+$('helpT').addEventListener('click',openHelp);
+$('helpClose').addEventListener('click',()=>$('helpOv').classList.remove('show'));
+$('helpOv').addEventListener('click',e=>{if(e.target===$('helpOv'))$('helpOv').classList.remove('show')});
+addEventListener('keydown',e=>{if(e.key==='Escape')$('helpOv').classList.remove('show')});
 
 function tossReveal(auto){
   const H=[0,5,2],NM=['Rock','Paper','Scissors'],a=S.pick[0],b=S.pick[1];
@@ -634,7 +799,7 @@ function choose(c){
 }
 function endInnings(){
   if(S.inn===1){
-    S.target=S.score+1;S.inn=2;S.score=0;S.state='break';
+    S.target=S.score+1;S.inn=2;S.score=0;S.state='break';S.dots=[];
     $('count').textContent='Innings break';
     const p=document.createElement('p');p.className='t';
     p.textContent=`Innings break. ${NAMES[bat()]} needs ${S.target} to win.`;
@@ -655,7 +820,7 @@ function endInnings(){
     S.resultTitle=t;S.resultDetail=s;
     $('wt').textContent=t;$('ws').textContent=s;
     $('tb').innerHTML=scorecardRows();
-    S.resultPhase=1;showResults();
+    S.resultPhase=1;showResults();if(r0!==r1)emit('win');
     timers.push(setTimeout(()=>{if(S.state==='over'){S.resultPhase=2;showResults();$('again').focus()}},1800));
     beep(520,.3);setTimeout(()=>beep(660,.3),180);setTimeout(()=>beep(880,.4),360);
   }
@@ -700,10 +865,10 @@ function showMatchNotice(){
 function buildKeys(){
   const T=S.mode==='toss'||S.mode==='review',L=['Rock','Paper','Scissors'],E=['✊','✋','✌️'];keysRps=T;
   [0,1].forEach(p=>{
-    const k=$('k'+p);k.innerHTML='';k.className='keys'+(T?' t3':'');
+    const k=$('k'+p);k.innerHTML='';k.className='keys'+(T?' t3':' n7');
     for(let i=0;i<(T?3:7);i++){
       const b=document.createElement('button');
-      if(T)b.innerHTML=`<span style="font-size:24px;line-height:1">${E[i]}</span><span>${L[i]}</span>`;else b.textContent=i;b.dataset.p=p;b.setAttribute('aria-label',NAMES[p]+' picks '+(T?L[i]:i));
+      if(T)b.innerHTML=`<span style="font-size:24px;line-height:1">${E[i]}</span><span>${L[i]}</span>`;else b.innerHTML=`<span class="bi">${hand(i,SKIN[p],(S&&S.cuffs&&S.cuffs[p])||'#15191f')}</span><span class="bn">${i}</span>`;b.dataset.p=p;b.dataset.n=i;b.setAttribute('aria-label',NAMES[p]+' picks '+(T?L[i]:i));
       b.addEventListener('click',()=>press(p,i));
       k.appendChild(b);
     }
@@ -984,7 +1149,7 @@ async function join(code){
 function snap(){
   const g=id=>$(id).innerHTML;
   const fx=p=>({text:$('fx'+p).textContent,cls:$('fx'+p).className});
-  return {S:{inn:S.inn,score:S.score,target:S.target,state:S.state,mode:S.mode,first:S.first,tw:S.tw,tossChoice:S.tossChoice,matchStartAt:S.matchStartAt,bk:S.bk,pick:S.pick,balls:S.balls,runs:S.runs,wickets:S.wickets,reviews:S.reviews,maxOvers:S.maxOvers,maxWickets:S.maxWickets,reviewing:S.reviewing,reviewId:S.reviewId,pendingOut:S.pendingOut,reviewDeadline:S.reviewDeadline,noticeId:S.noticeId,noticeTitle:S.noticeTitle,noticeDetail:S.noticeDetail,noticeUntil:S.noticeUntil,resultPhase:S.resultPhase,resultTitle:S.resultTitle,resultDetail:S.resultDetail,players:S.players,connected:S.connected,activeBat:S.activeBat,activeBowl:S.activeBowl,figures:S.figures,batting:S.batting,strategy:S.strategy,strategyId:S.strategyId,syncRevision:S.syncRevision,intro:S.intro,tossStarted:S.tossStarted,cuffs:S.cuffs,cuffSet:S.cuffSet,themeReady:S.themeReady,themePrompt:S.themePrompt},names:NAMES,guestReady:true,count:$('count').textContent,h0:g('h0'),h1:g('h1'),n0:$('n0').textContent,n1:$('n1').textContent,fx:[fx(0),fx(1)],log:g('log'),tossShow:$('tossOv').classList.contains('show'),ovShow:$('ov').classList.contains('show'),wt:$('wt').textContent,ws:$('ws').textContent,tb:g('tb')};
+  return {S:{inn:S.inn,score:S.score,target:S.target,state:S.state,mode:S.mode,first:S.first,tw:S.tw,tossChoice:S.tossChoice,matchStartAt:S.matchStartAt,bk:S.bk,pick:S.pick,balls:S.balls,runs:S.runs,wickets:S.wickets,reviews:S.reviews,maxOvers:S.maxOvers,maxWickets:S.maxWickets,reviewing:S.reviewing,reviewId:S.reviewId,pendingOut:S.pendingOut,reviewDeadline:S.reviewDeadline,noticeId:S.noticeId,noticeTitle:S.noticeTitle,noticeDetail:S.noticeDetail,noticeUntil:S.noticeUntil,resultPhase:S.resultPhase,resultTitle:S.resultTitle,resultDetail:S.resultDetail,players:S.players,connected:S.connected,activeBat:S.activeBat,activeBowl:S.activeBowl,figures:S.figures,batting:S.batting,strategy:S.strategy,strategyId:S.strategyId,syncRevision:S.syncRevision,intro:S.intro,tossStarted:S.tossStarted,cuffs:S.cuffs,cuffSet:S.cuffSet,dots:S.dots,evId:S.evId,evq:S.evq,themeReady:S.themeReady,themePrompt:S.themePrompt},names:NAMES,guestReady:true,count:$('count').textContent,h0:g('h0'),h1:g('h1'),n0:$('n0').textContent,n1:$('n1').textContent,fx:[fx(0),fx(1)],log:g('log'),tossShow:$('tossOv').classList.contains('show'),ovShow:$('ov').classList.contains('show'),wt:$('wt').textContent,ws:$('ws').textContent,tb:g('tb')};
 }
 function publishState(){
   if(net.role!=='host'||!net.room)return;
@@ -1015,8 +1180,11 @@ function apply(d){
   Object.assign(S,d.S);
   // Firebase drops null/empty values, so a missing key means "cleared". Without this,
   // old values (strategy, pendingOut, activeBat...) survive on players' devices.
-  const NUL={target:null,reviewing:null,pendingOut:null,strategy:null,activeBat:null,activeBowl:null,players:null,tossChoice:'',noticeTitle:'',noticeDetail:'',resultTitle:'',resultDetail:'',strategyId:'',matchStartAt:0,noticeUntil:0,reviewDeadline:0,intro:0,connected:{},figures:{},batting:{},pick:[null,null]};
+  const NUL={target:null,reviewing:null,pendingOut:null,strategy:null,activeBat:null,activeBowl:null,players:null,tossChoice:'',noticeTitle:'',noticeDetail:'',resultTitle:'',resultDetail:'',strategyId:'',matchStartAt:0,noticeUntil:0,reviewDeadline:0,intro:0,connected:{},figures:{},batting:{},pick:[null,null],dots:[],evq:[]};
   Object.keys(NUL).forEach(k=>{if(d.S[k]===undefined)S[k]=NUL[k]});
+  // Replay the host's visual/sound events (flash, shake, banners, confetti) exactly once on this device.
+  if(net.evSeen==null)net.evSeen=Number(S.evId)||0;
+  Object.values(S.evq||{}).sort((a,b)=>a.id-b.id).forEach(e=>{if(e.id>net.evSeen){net.evSeen=e.id;try{playEv(e)}catch(x){}}});
   if(S.state!=='strategy')$('strategyOv').classList.remove('show');
   if(changedStrategy&&net.strategyModal){unmodal();net.strategyModal=''}
   if(S.state!=='reviewOffer'&&$('mt').textContent==='You are out — take a review?')unmodal();
