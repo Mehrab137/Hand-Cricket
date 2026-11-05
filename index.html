@@ -364,6 +364,52 @@ h1,.card h2,#mo.menu #mt{background-image:linear-gradient(90deg,#fff,var(--hl1) 
 .readyline{min-height:18px;margin:6px 0 2px;text-align:center;font:700 12px var(--body);color:#a9b4ff;opacity:0;transform:translateY(-3px);transition:opacity .25s,transform .25s;pointer-events:none}
 .readyline.show{opacity:.9;transform:none}
 .go.isready{background:linear-gradient(160deg,#35d07f,#1d9a5c)!important;color:#05220f!important;opacity:.95}
+/* ---------- mobile: everything that matters fits on one screen ---------- */
+@media(max-width:640px){
+ .wrap{padding:calc(env(safe-area-inset-top,0px) + 10px) 10px calc(env(safe-area-inset-bottom,0px) + 230px)}
+ header{margin-bottom:6px;gap:6px}h1{font-size:20px}.tg{gap:5px}.tg .chip{padding:6px 10px;font-size:12px}
+ /* compact scoreboard: score, overs, wickets, target. Tap it for the full board. */
+ .score{grid-template-columns:repeat(4,1fr);margin-bottom:8px;border-top-width:3px;cursor:pointer;position:relative}
+ .score .match-meta{display:contents}
+ .score .stat{padding:7px 3px}.score .stat small{font-size:8.5px;letter-spacing:.08em}.score .stat b{font-size:19px}.score .stat.score-main b{font-size:26px}
+ .score>.stat:nth-child(1),.score>.stat:nth-child(2),.score .match-meta .stat:nth-child(2),.score .match-meta .stat:nth-child(3){display:none}
+ .score .stat.score-main{order:1}.score .stat.accent{order:2}.score .match-meta .stat:nth-child(1){order:3}.score .match-meta .stat:nth-child(4){order:4}
+ .score.open{grid-template-columns:repeat(2,1fr)}
+ .score.open .stat{display:block!important;order:0!important}.score.open>.stat:nth-child(1){order:-3!important}.score.open>.stat:nth-child(2){order:-2!important}
+ .score::after{content:'▾ tap for full board';position:absolute;right:8px;bottom:-1px;font:700 8px var(--body);letter-spacing:.06em;color:rgba(255,255,255,.35);display:none}
+ .chase{margin:0 0 8px!important;padding:6px 10px!important}.chase-top{font-size:13px!important}.chase-bar{height:5px!important;margin:5px 0!important}
+ .chase .dots{gap:4px}.chase .dots span{width:20px!important;height:20px!important;font-size:10px!important;line-height:20px!important}
+ /* stage: hand | countdown | hand on ONE row, Ready button underneath */
+ .stage{margin:0 0 8px;padding:8px 6px 8px;grid-template-columns:1fr auto 1fr;gap:4px 4px}
+ .stage .mid{display:contents}
+ .stage .cwrap{grid-column:2;grid-row:1;width:92px;margin:0}.stage .cwrap .count{font-size:17px}.stage .count.num{font-size:44px}
+ .stage .side:nth-of-type(1){grid-column:1;grid-row:1}.stage .side:last-of-type{grid-column:3;grid-row:1}
+ .stage .bar{display:none}
+ .stage .go{grid-column:1/-1;grid-row:2;padding:10px 14px;font-size:15px;margin-top:2px}
+ .stage .readyline{grid-column:1/-1;grid-row:3;margin:0;min-height:0;font-size:12px;display:none}.stage .readyline.show{display:block}
+ .stage .hintline{grid-column:1/-1;grid-row:4;font-size:11px;min-height:0;margin:0}
+ .stage .hand{width:min(104px,28vw)}.stage .hand-box{height:min(120px,18dvh)}
+ .stage .role{font-size:11px}.stage .num{font-size:13px;min-height:0}
+ .stage::before{inset:6px 36%}
+ /* number pad pinned at the bottom, big enough to hit */
+ #pad0,#pad1{order:4!important;position:fixed;left:8px;right:8px;bottom:calc(env(safe-area-inset-bottom,0px) + 6px);z-index:30;padding:8px 8px 4px;border-radius:18px;box-shadow:0 -6px 24px rgba(0,0,0,.45),0 10px 20px rgba(0,0,0,.3);backdrop-filter:blur(10px)}
+ #pad0 h2,#pad1 h2{margin:0 0 4px;font-size:13px}.pad .hint{display:none}
+ .keys.n7{gap:6px 5px;padding:0 0 4px}
+ .keys.n7 button{padding:6px 0 4px;border-radius:16px}.keys.n7 .bi .hand{width:32px!important}.keys.n7 .bn{font-size:20px}
+ .keys.t3 button{padding:12px 0 10px}
+ .keys button.sel,.keys.n7 button.sel{transform:scale(1.18) translateY(-2px)}.keys.n7 button.sel .bn{font-size:24px}.keys.n7 button.sel .bi .hand{width:36px!important}
+ .log{order:5;max-height:130px;margin-top:6px}
+ .reacts{order:3;margin:-2px 0 6px!important;gap:6px;justify-content:flex-end}.reacts button{width:38px!important;height:30px!important;font-size:15px!important;padding:0!important;border-radius:15px!important}
+ .keys button.sel,.keys.n7 button.sel{transform:scale(1.1) translateY(-1px)!important}
+}
+@media(max-width:640px) and (max-height:720px){
+ header h1{display:none}header{justify-content:flex-end;margin-bottom:4px}
+ .chase-bar,.chase .dots small{display:none!important}.chase{padding:5px 10px!important}
+ .keys.n7{gap:4px 4px;padding-bottom:2px}.keys.n7 button{padding:3px 0 2px;border-radius:14px}.keys.n7 .bi .hand{width:26px!important}.keys.n7 .bn{font-size:18px}
+ #pad0,#pad1{padding:6px 8px 2px}#pad0 h2,#pad1 h2{margin-bottom:2px}
+ .stage .hand-box{height:min(104px,17dvh)}.stage .hand{width:min(92px,26vw)}.stage .go{padding:8px 12px}
+ .reacts{display:none}
+}
 </style>
 </head>
 <body>
@@ -1470,7 +1516,7 @@ function tossView(show,title){
   $('tossOv').classList.toggle('show',show);
 }
 function menu(){
-  modal('Hand Cricket',`<div class="menu-hero"><span class="mh l">${hand(0,SKIN[0],'#15191f')}</span><span class="mh r">${hand(5,SKIN[1],'#15191f')}</span></div><div class="menu-tag">Rock-paper-scissors rules. Cricket glory.</div>`,[
+  modal('Hand Cricket',`<div class="menu-hero"><span class="mh l">${hand(0,SKIN[0],'#15191f')}</span><span class="mh r">${hand(5,SKIN[1],'#15191f')}</span></div><div class="menu-tag">Let's Make Those Fists Talk with Hand Cricket!</div>`,[
     ['🤖  Play vs AI|Warm up solo against the computer',()=>{unmodal();ai=true;net.role='solo';applyRole();askName(0,()=>askMatchSetup(()=>{setName(1,'🤖 AI');beginCuffSetup()}))}],
     ['🌐  Create an online room|Host a match and invite your friends',()=>{unmodal();ai=false;askName(0,()=>askMatchSetup(host,true))}],
     ['🔗  Join with a room code|Got a code? Jump straight in',joinUI]]);
@@ -1769,6 +1815,8 @@ if(/^[A-Za-z0-9]{6}$/.test(hs)){modal('Joining room','Connecting to the match…
 
 (function(){const c=document.getElementById('count');if(!c)return;let last=c.textContent;
  new MutationObserver(()=>{const t=c.textContent;if(t===last)return;last=t;c.classList.toggle('num',/^\d$/.test(t));c.classList.remove('pop');void c.offsetWidth;c.classList.add('pop')}).observe(c,{childList:true,characterData:true,subtree:true})})();
+
+(function(){const sc=document.querySelector('.score');if(sc)sc.addEventListener('click',()=>{if(matchMedia('(max-width:640px)').matches)sc.classList.toggle('open')})})();
 })();
 </script>
 </body>
