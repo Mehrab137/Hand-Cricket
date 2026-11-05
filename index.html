@@ -332,6 +332,16 @@ h1,.card h2,#mo.menu #mt{background-image:linear-gradient(90deg,#fff,var(--hl1) 
 .sndcheck{margin:4px 0 14px;padding:10px;border-radius:14px;background:rgba(0,0,0,.22)}.sndcheck b{display:block;font-size:14px}.sndcheck small{display:block;color:#c7d0ff;font-size:12px;margin:2px 0 8px}
 .sc-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px}.sc-grid button{display:flex;flex-direction:column;align-items:flex-start;gap:2px;padding:8px 10px;border:1px solid #5566b8;border-radius:12px;background:rgba(255,255,255,.07);color:var(--bone);font:700 13px var(--body);cursor:pointer}
 .sc-grid button:active{transform:scale(.97)}.sc-grid em{font:600 11px var(--body);font-style:normal;color:#a3aed6}.sc-grid em.mine{color:#6ee58d}
+/* selected number: big and clear, the rest step back */
+.keys button{transition:transform .22s cubic-bezier(.2,1.4,.4,1),opacity .2s,filter .2s,box-shadow .2s}
+.keys:has(button.sel) button:not(.sel):not(:disabled){opacity:.5;filter:saturate(.6)}
+.keys:has(button.sel) button:not(.sel):disabled{opacity:.3}
+.keys button.sel,.keys.n7 button.sel,.keys.t3 button.sel{position:relative;z-index:5;rotate:0deg;opacity:1;filter:none;transform:scale(1.25) translateY(-2px);border-bottom-width:4px;
+ box-shadow:0 0 0 3px #fff,0 0 22px color-mix(in srgb,var(--c) 80%,#fff),0 10px 20px rgba(0,0,0,.45);animation:bigPick .34s cubic-bezier(.2,1.6,.4,1)}
+.keys.n7 button.sel .bn{font-size:28px}.keys.n7 button.sel .bi .hand{width:46px}
+.keys.t3 button.sel{font-size:15px}
+.keys button.sel:disabled{opacity:1}
+@keyframes bigPick{0%{transform:scale(1)}60%{transform:scale(1.45) translateY(-4px)}100%{transform:scale(1.25) translateY(-2px)}}
 </style>
 </head>
 <body>
