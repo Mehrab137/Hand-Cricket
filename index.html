@@ -342,6 +342,28 @@ h1,.card h2,#mo.menu #mt{background-image:linear-gradient(90deg,#fff,var(--hl1) 
 .keys.t3 button.sel{font-size:15px}
 .keys button.sel:disabled{opacity:1}
 @keyframes bigPick{0%{transform:scale(1)}60%{transform:scale(1.45) translateY(-4px)}100%{transform:scale(1.25) translateY(-2px)}}
+/* ---------- animated countdown + ready line ---------- */
+.cwrap{width:min(132px,32vw);margin-bottom:10px;overflow:visible}
+.cwrap::before{content:'';position:absolute;inset:-14%;border-radius:50%;z-index:0;background:radial-gradient(circle,rgba(255,196,61,.22),rgba(255,196,61,0) 68%);animation:haloIdle 2.6s ease-in-out infinite}
+.cwrap::after{content:'';position:absolute;inset:11%;border-radius:50%;z-index:0;background:radial-gradient(circle at 50% 30%,rgba(255,255,255,.12),rgba(10,16,40,.55) 70%);box-shadow:inset 0 0 14px rgba(0,0,0,.45)}
+.cwrap .count{position:relative;z-index:2}.ring{z-index:1;overflow:visible}
+.ring circle{stroke-width:7}
+.ring .rt{stroke:rgba(255,255,255,.35);stroke-width:2;stroke-dasharray:1.2 5.1;stroke-linecap:butt;transform-origin:50% 50%;animation:tickSpin 14s linear infinite}
+.ring .rf{filter:drop-shadow(0 0 5px currentColor)}
+.mid:has(.bar.run) .cwrap::before{animation:haloRun 3s linear forwards}
+.mid:has(.bar.run) .ring .rt{animation:tickSpin 3s linear infinite;stroke:rgba(255,255,255,.6)}
+.mid:has(.bar.run) .cwrap{animation:ringBeat 1s ease-in-out 3}
+.mid:has(.bar.run) .rf{animation:ringdrain 3s linear forwards;color:#ffc43d}
+@keyframes haloIdle{0%,100%{opacity:.55;transform:scale(.96)}50%{opacity:1;transform:scale(1.06)}}
+@keyframes haloRun{0%{opacity:.9;background:radial-gradient(circle,rgba(255,196,61,.4),rgba(255,196,61,0) 68%)}60%{opacity:1;background:radial-gradient(circle,rgba(255,150,40,.5),rgba(255,150,40,0) 68%)}100%{opacity:1;transform:scale(1.14);background:radial-gradient(circle,rgba(255,70,60,.6),rgba(255,70,60,0) 68%)}}
+@keyframes ringBeat{0%{transform:scale(1)}12%{transform:scale(1.07)}30%,100%{transform:scale(1)}}
+@keyframes tickSpin{to{transform:rotate(360deg)}}
+.count.pop{animation:cntPop .55s cubic-bezier(.2,1.7,.35,1)}
+.count.num{font-size:clamp(38px,11vw,64px);color:#fff;text-shadow:0 3px 0 rgba(0,0,0,.45),0 0 22px rgba(255,196,61,.75)}
+@keyframes cntPop{0%{transform:scale(2.3);opacity:0}45%{opacity:1}100%{transform:scale(1)}}
+.readyline{min-height:18px;margin:6px 0 2px;text-align:center;font:700 12px var(--body);color:#a9b4ff;opacity:0;transform:translateY(-3px);transition:opacity .25s,transform .25s;pointer-events:none}
+.readyline.show{opacity:.9;transform:none}
+.go.isready{background:linear-gradient(160deg,#35d07f,#1d9a5c)!important;color:#05220f!important;opacity:.95}
 </style>
 </head>
 <body>
@@ -376,9 +398,10 @@ h1,.card h2,#mo.menu #mt{background-image:linear-gradient(90deg,#fff,var(--hl1) 
  <div class="atmos" aria-hidden="true"><div class="haze"></div><div class="lights"></div><div class="crowd" id="crowd"></div></div>
  <div class="side"><div class="role" id="r0"></div><div class="hand-box" id="h0"></div><div class="impact" id="fx0" aria-live="polite"></div><div class="num" id="n0"></div></div>
  <div class="mid">
-  <div class="cwrap"><svg class="ring" viewBox="0 0 100 100" aria-hidden="true"><circle class="rb" cx="50" cy="50" r="44"/><circle class="rf" cx="50" cy="50" r="44"/></svg><div class="count" id="count">Ready</div></div>
+  <div class="cwrap"><svg class="ring" viewBox="0 0 100 100" aria-hidden="true"><circle class="rt" cx="50" cy="50" r="49"/><circle class="rb" cx="50" cy="50" r="44"/><circle class="rf" cx="50" cy="50" r="44"/></svg><div class="count" id="count">Ready</div></div>
   <div class="bar" id="bar"><i></i></div>
-  <button class="go" id="go">Bowl first ball</button>
+  <button class="go" id="go">Ready to bowl</button>
+  <div class="readyline" id="readyLine" aria-live="polite"></div>
   <div class="hintline" id="hintLine"></div>
  </div>
  <div class="side"><div class="role" id="r1"></div><div class="hand-box" id="h1"></div><div class="impact" id="fx1" aria-live="polite"></div><div class="num" id="n1"></div></div>
@@ -464,7 +487,7 @@ function reset(){
   timers.forEach(clearTimeout);timers=[];
   const oldCuffs=S&&S.cuffs?S.cuffs:['#15191f','#15191f'],oldSet=S&&S.cuffSet?S.cuffSet:[false,false],oldEv=S&&S.evId||0;
   const oldOvers=S&&S.maxOvers||1,oldWickets=S&&S.maxWickets||1;
-  S={inn:1,score:0,target:null,state:'idle',mode:'toss',first:0,tw:0,tossChoice:'',matchStartAt:0,bk:0,pick:[null,null],balls:[0,0],runs:[0,0],wickets:[0,0],reviews:[1,1],maxOvers:oldOvers,maxWickets:oldWickets,reviewing:null,reviewId:0,pendingOut:null,reviewDeadline:0,noticeId:0,noticeTitle:'',noticeDetail:'',noticeUntil:0,resultPhase:0,resultTitle:'',resultDetail:'',players:null,connected:{},activeBat:null,activeBowl:null,figures:{},batting:{},strategy:null,strategyId:'',syncRevision:0,log:[],intro:0,tossStarted:false,cuffs:oldCuffs,cuffSet:oldSet,dots:[],worm:[[],[]],evq:[],evId:oldEv,themeReady:[true,true],themePrompt:false};
+  S={ready:[0,0],inn:1,score:0,target:null,state:'idle',mode:'toss',first:0,tw:0,tossChoice:'',matchStartAt:0,bk:0,pick:[null,null],balls:[0,0],runs:[0,0],wickets:[0,0],reviews:[1,1],maxOvers:oldOvers,maxWickets:oldWickets,reviewing:null,reviewId:0,pendingOut:null,reviewDeadline:0,noticeId:0,noticeTitle:'',noticeDetail:'',noticeUntil:0,resultPhase:0,resultTitle:'',resultDetail:'',players:null,connected:{},activeBat:null,activeBowl:null,figures:{},batting:{},strategy:null,strategyId:'',syncRevision:0,log:[],intro:0,tossStarted:false,cuffs:oldCuffs,cuffSet:oldSet,dots:[],worm:[[],[]],evq:[],evId:oldEv,themeReady:[true,true],themePrompt:false};
   $('ov').classList.remove('show');$('winOv').classList.remove('show');$('matchOv').classList.remove('show');$('reviewOv').classList.remove('show');$('strategyOv').classList.remove('show');$('tossOv').classList.remove('show');showTossIntro(0);clearImpacts();buildKeys();
   $('log').innerHTML='<p class="t">Play rock paper scissors to decide the toss. Picks stay hidden until the reveal.</p>';
   $('count').textContent='Ready';
@@ -518,11 +541,14 @@ function render(){
   if(T){$('r0').innerHTML=`<em>${teamMode()?playerLabel(0):NAMES[0]}</em>`;$('r1').innerHTML=`<em>${teamMode()?playerLabel(1):NAMES[1]}</em>`}
   else{$('r'+b).innerHTML=`<em style="color:var(--brass)">${playerLabel(b)} · Batter</em>`;
   $('r'+bowl()).innerHTML=`<em>${playerLabel(bowl())} · Bowler</em>`}
-  const normalLab=S.mode==='lobby'?'Start match':T?'Start toss':S.balls[0]+S.balls[1]===0?'Bowl first ball':S.state==='break'?'Start innings 2':'Next ball';
-  const lab=teamMode()&&!T&&S.mode!=='lobby'&&!canControlSide(bowl())?'Waiting for the bowler':normalLab;
-  $('go').textContent=lab;
+  const normalLab=S.mode==='lobby'?'Start match':T?'Start toss':'Ready';
+  const rd=readyInfo();
+  $('go').textContent=(S.mode==='lobby'||T)?normalLab:rd.label;
   const lobbyReady=S.mode==='lobby'&&lobbyStatus().ok;
-  $('go').disabled=(S.mode==='lobby'?!lobbyReady||net.role!=='host':S.state==='pick'||S.state==='strategy'||S.state==='over'||S.state==='choose'||S.state==='intro'||S.state==='reviewIntro'||S.state==='reviewOffer'||now()<S.noticeUntil||!canControlSide(bowl()));
+  $('go').disabled=(S.mode==='lobby'?!lobbyReady||net.role!=='host':S.state==='pick'||S.state==='strategy'||S.state==='over'||S.state==='choose'||S.state==='intro'||S.state==='reviewIntro'||S.state==='reviewOffer'||now()<S.noticeUntil||(!T&&rd.disabled)||(T&&!canControlSide(bowl())));
+  $('go').classList.toggle('isready',!T&&S.mode!=='lobby'&&rd.mine);
+  if($('readyLine').textContent!==rd.line)$('readyLine').textContent=rd.line;
+  $('readyLine').classList.toggle('show',!!rd.line&&(S.state==='idle'||S.state==='break'));
   document.querySelectorAll('.keys button').forEach(x=>x.disabled=S.state!=='pick'||(ai&&x.dataset.p==='1')||!canControlSide(+x.dataset.p));
   if(net.lastScore!==S.score){net.lastScore=S.score;const el=$('sScore');el.classList.remove('tick');void el.offsetWidth;el.classList.add('tick')}
   try{renderChase();renderHint();applyTheme()}catch(e){}
@@ -760,7 +786,7 @@ const RUN=[0,['Just a single. {b} jogs it like they’re late for a bus.','One r
 function startBall(){
   if(S.state==='over'||S.state==='pick')return;
   if(S.state==='break'){S.state='idle'}
-  S.state='pick';S.pick=[null,null];S.bk++;clearSel();
+  S.state='pick';S.pick=[null,null];S.ready=[0,0];S.bk++;clearSel();
   S.intro=0;showTossIntro(0);clearImpacts();
   $('l0').textContent=$('l1').textContent='Choose now';
   $('l0').className=$('l1').className='lock';
@@ -779,6 +805,7 @@ function startBall(){
 function lock(p,n){
   if(S.state!=='pick')return;
   S.pick[p]=n;
+  if(ai&&p===0)document.querySelectorAll('#k0 button').forEach((b,i)=>b.classList.toggle('sel',i===n));
   const l=$('l'+p);l.textContent='Locked in';l.className='lock on';
   beep(220,.06,'square');
 }
@@ -880,19 +907,31 @@ function handleReview(decision){
   render();showReviewStatus();
   timers.push(setTimeout(()=>{if(S.state==='reviewIntro')beginReviewRPS()},2700));
 }
-function beginReviewRPS(){
-  S.mode='review';S.state='pick';S.pick=[null,null];S.bk++;clearSel();buildKeys();emit('ump','CHECKING…','chk');
-  $('count').textContent='Review';$('l0').textContent=$('l1').textContent='Review: choose';$('l0').className=$('l1').className='lock';
+function beginReviewRPS(again){
+  // Show the CHECKING banner first and only then open the 3-second pick window,
+  // so the banner never eats into the time players have to choose.
+  S.mode='review';S.state='reviewIntro';S.pick=[null,null];clearSel();buildKeys();
+  if(!again)emit('ump','CHECKING…','chk');
+  $('count').textContent='Review';$('l0').textContent=$('l1').textContent='Get ready…';$('l0').className=$('l1').className='lock';
   $('n0').textContent=$('n1').textContent='';showHands(0,0,false);
+  const bar=$('bar');bar.classList.remove('run');void bar.offsetWidth;
+  render();showReviewStatus();
+  const bk=S.reviewTok;
+  timers.push(setTimeout(()=>{if(S.reviewTok===bk&&S.mode==='review'&&S.state==='reviewIntro')startReviewPick()},again?700:1900));
+}
+function startReviewPick(){
+  S.state='pick';S.pick=[null,null];S.bk++;clearSel();
+  $('l0').textContent=$('l1').textContent='Review: choose';$('l0').className=$('l1').className='lock';
+  ['3','2','1'].forEach((t,i)=>timers.push(setTimeout(()=>{if(S.state==='pick'){$('count').textContent=t;beep(380+i*120,.15)}},i*1000)));
   const bar=$('bar');bar.classList.remove('run');void bar.offsetWidth;bar.classList.add('run');
   if(ai)timers.push(setTimeout(()=>lock(1,Math.floor(Math.random()*3)),400+Math.random()*1500));
-  timers.push(setTimeout(reveal,online()?3400:3000));render();showReviewStatus();
+  timers.push(setTimeout(reveal,online()?3400:3000));render();showReviewStatus();publishState();
 }
 function reviewReveal(auto){
   const H=[0,5,2],NM=['Rock','Paper','Scissors'],a=S.pick[0],b=S.pick[1],d=(a-b+3)%3;
   showHands(H[a],H[b],true,'pop');$('n0').textContent=NM[a]+(auto[0]?' (auto)':'');$('n1').textContent=NM[b]+(auto[1]?' (auto)':'');
   const note=(text,cls)=>{const p=document.createElement('p');p.className=cls;p.textContent=text;$('log').prepend(p)};
-  if(d===0){note('Review tied — play rock-paper-scissors again.','t');S.state='idle';render();timers.push(setTimeout(beginReviewRPS,1500));return}
+  if(d===0){note('Review tied — play rock-paper-scissors again.','t');S.state='idle';render();timers.push(setTimeout(()=>beginReviewRPS(true),1500));return}
   const winner=d===1?0:1;
   note(`${playerLabel(winner)} wins the review toss.`,winner===S.reviewing?'b':'o');
   if(winner===S.reviewing)surviveReview();else finalizeOut(true);
@@ -1374,12 +1413,42 @@ function press(p,n){
   const l=$('l'+p);l.textContent='Locked in';l.className='lock on';
   if(p===1||net.role==='player')send({t:'pick',n,team:p});else lock(0,n);
 }
+// ---- Ready flow: the batter and the bowler each press "Ready"; the ball starts when both are ready. ----
+function mySide(){ // the side (0/1) this device acts for in the next ball; batter first when it controls both
+  if(!online())return ai?0:bat();
+  const b=bat(),w=bowl();
+  if(canControlSide(b))return b;
+  if(canControlSide(w))return w;
+  return -1;
+}
+function readyInfo(){
+  const b=bat(),w=bowl(),side=mySide(),rd=Array.isArray(S.ready)?S.ready:[0,0];
+  const role=side===b?'bat':'bowl',label=side<0?'Waiting for players':'Ready to '+role;
+  const otherName=side===b?'the bowler':'the batter';
+  if(side<0)return{label,disabled:true,mine:false,line:rd[b]?'🏏 Batter is ready':rd[w]?'🎯 Bowler is ready':''};
+  const mine=!!rd[side],other=side===b?w:b,theirs=!!rd[other];
+  if(!online()){return{label,disabled:false,mine:false,line:''}}
+  if(mine)return{label:'Ready ✓',disabled:true,mine:true,line:theirs?'Starting…':'Waiting for '+otherName+'…'};
+  return{label,disabled:false,mine:false,line:theirs?(side===b?'🎯 Bowler is ready':'🏏 Batter is ready'):''};
+}
+function markReady(side){
+  if(S.state!=='idle'&&S.state!=='break')return;
+  if(now()<S.noticeUntil)return;
+  if(side!==0&&side!==1)return;
+  if(!Array.isArray(S.ready))S.ready=[0,0];
+  if(S.ready[side])return;
+  S.ready[side]=1;beep(520,.07,'sine');
+  if(S.ready[0]&&S.ready[1]){timers.forEach(clearTimeout);timers=[];startBall();publishState();return}
+  render();publishState();
+}
 function act(){
   if(now()<S.noticeUntil)return;
   if(S.mode==='lobby'){if(net.role==='host')startTeamMatch();return}
-  if(teamMode()&&!canControlSide(bowl()))return;
+  if(S.mode==='toss'){if(teamMode()&&!canControlSide(bowl()))return;if(net.role==='guest'||net.role==='player'){send({t:'go'});return}if(S.state==='idle'||S.state==='break'){timers.forEach(clearTimeout);timers=[];startBall()}return}
+  if(!online()){if(S.state==='idle'||S.state==='break'){timers.forEach(clearTimeout);timers=[];startBall()}return}   // AI or same-device play: the other side is always ready
+  const side=mySide();if(side<0)return;
   if(net.role==='guest'||net.role==='player'){send({t:'go'});return}
-  if(S.state==='idle'||S.state==='break'){timers.forEach(clearTimeout);timers=[];startBall()}
+  markReady(side);
 }
 function again(){
   if(online()&&net.role!=='host')return;
@@ -1401,7 +1470,7 @@ function tossView(show,title){
   $('tossOv').classList.toggle('show',show);
 }
 function menu(){
-  modal('Hand Cricket',`<div class="menu-hero"><span class="mh l">${hand(0,SKIN[0],'#15191f')}</span><span class="mh r">${hand(5,SKIN[1],'#15191f')}</span></div><div class="menu-tag">Let's Make Those Fists Talk with Hand Cricket!</div>`,[
+  modal('Hand Cricket',`<div class="menu-hero"><span class="mh l">${hand(0,SKIN[0],'#15191f')}</span><span class="mh r">${hand(5,SKIN[1],'#15191f')}</span></div><div class="menu-tag">Rock-paper-scissors rules. Cricket glory.</div>`,[
     ['🤖  Play vs AI|Warm up solo against the computer',()=>{unmodal();ai=true;net.role='solo';applyRole();askName(0,()=>askMatchSetup(()=>{setName(1,'🤖 AI');beginCuffSetup()}))}],
     ['🌐  Create an online room|Host a match and invite your friends',()=>{unmodal();ai=false;askName(0,()=>askMatchSetup(host,true))}],
     ['🔗  Join with a room code|Got a code? Jump straight in',joinUI]]);
@@ -1493,7 +1562,7 @@ function receiveGuestAction(m){
     else if(m.t==='pick'&&m.uid===(S.mode==='review'?captainFor(m.team)?.id:activeIdFor(m.team)))lock(m.team,m.n);
     else if(m.t==='review'&&m.uid===activeIdFor(S.reviewing))handleReview(m.decision);
     else if(m.t==='strategy'&&S.strategy&&m.uid===captainFor(S.strategy.team)?.id&&S.strategy.options.includes(m.id))selectStrategy(m.id);
-    else if(m.t==='go'&&m.uid===activeIdFor(bowl())&&(S.state==='idle'||S.state==='break')&&Date.now()>=S.noticeUntil){timers.forEach(clearTimeout);timers=[];startBall()}
+    else if(m.t==='go'){if(S.mode==='toss'){if(m.uid===activeIdFor(bowl())&&(S.state==='idle'||S.state==='break')&&Date.now()>=S.noticeUntil){timers.forEach(clearTimeout);timers=[];startBall()}}else{const sd=[bat(),bowl()].find(t=>activeIdFor(t)===m.uid);if(sd!==undefined)markReady(sd)}}
     else if(m.t==='choose'&&m.uid===captainFor(S.tw)?.id)choose(m.c);
     else if(m.t==='again')again();
     showLobby();return;
@@ -1503,7 +1572,7 @@ function receiveGuestAction(m){
   else if(m.t==='theme'){S.cuffs[1]=m.color;S.themeReady[1]=true;showHands(0,0,false);completeCuffSetup()}
   else if(m.t==='pick')lock(1,m.n);
   else if(m.t==='review')handleReview(m.decision);
-  else if(m.t==='go')act();
+  else if(m.t==='go'){if(S.mode==='toss')act();else markReady(1)}
   else if(m.t==='choose'&&S.tw===1)choose(m.c);
   else if(m.t==='again')again();
 }
@@ -1575,7 +1644,7 @@ function apply(d){
   Object.assign(S,d.S);
   // Firebase drops null/empty values, so a missing key means "cleared". Without this,
   // old values (strategy, pendingOut, activeBat...) survive on players' devices.
-  const NUL={reviewTok:'',target:null,reviewing:null,pendingOut:null,strategy:null,activeBat:null,activeBowl:null,players:null,tossChoice:'',noticeTitle:'',noticeDetail:'',resultTitle:'',resultDetail:'',strategyId:'',matchStartAt:0,noticeUntil:0,reviewDeadline:0,intro:0,connected:{},figures:{},batting:{},pick:[null,null],dots:[],evq:[]};
+  const NUL={ready:[0,0],reviewTok:'',target:null,reviewing:null,pendingOut:null,strategy:null,activeBat:null,activeBowl:null,players:null,tossChoice:'',noticeTitle:'',noticeDetail:'',resultTitle:'',resultDetail:'',strategyId:'',matchStartAt:0,noticeUntil:0,reviewDeadline:0,intro:0,connected:{},figures:{},batting:{},pick:[null,null],dots:[],evq:[]};
   Object.keys(NUL).forEach(k=>{if(d.S[k]===undefined)S[k]=NUL[k]});
   // Replay the host's visual/sound events (flash, shake, banners, confetti) exactly once on this device.
   if(net.evSeen==null)net.evSeen=Number(S.evId)||0;
@@ -1630,7 +1699,7 @@ setInterval(()=>{
   if(net.role!=='host'||S.mode==='lobby')return;
   const k=[S.state,S.mode,S.strategyId,S.bk,S.reviewId,S.inn,S.tossChoice].join('|');
   if(k!==wd.k){wd={k,t:Date.now()};return}
-  const lim={choose:25000,decisionNotice:5000,strategy:20000,countdown:8000,reviewOffer:6000,reviewIntro:6000,idle:7000,break:12000,intro:9000}[S.state];
+  const lim={choose:25000,decisionNotice:5000,strategy:20000,countdown:8000,reviewOffer:6000,reviewIntro:6000,idle:14000,break:12000,intro:9000}[S.state];
   if(!lim||Date.now()-wd.t<lim)return;
   wd.t=Date.now();const q=S.strategy;
   if(S.state==='choose'&&S.mode==='toss'){tossView(false,'');choose(Math.random()<.5?'bat':'bowl')}
@@ -1697,6 +1766,9 @@ try{setTheme(+localStorage.getItem('hc-theme')||0)}catch(e){setTheme(0)}
 reset();
 const hs=location.hash.slice(1);
 if(/^[A-Za-z0-9]{6}$/.test(hs)){modal('Joining room','Connecting to the match…',[]);join(hs.toUpperCase())}else menu();
+
+(function(){const c=document.getElementById('count');if(!c)return;let last=c.textContent;
+ new MutationObserver(()=>{const t=c.textContent;if(t===last)return;last=t;c.classList.toggle('num',/^\d$/.test(t));c.classList.remove('pop');void c.offsetWidth;c.classList.add('pop')}).observe(c,{childList:true,characterData:true,subtree:true})})();
 })();
 </script>
 </body>
